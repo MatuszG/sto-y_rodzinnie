@@ -404,15 +404,21 @@
            cursor:pointer;display:flex;align-items:center;justify-content:center}
   #gvClear:hover{background:var(--accent);border-color:var(--accent);color:#fff}
   #gvClear[hidden]{display:none}
-  /* Powrot do calego planu pokazuje sie DOPIERO po wyborze osoby: bez wyboru nie ma
-     dokad wracac, a przycisk „Cały plan" wisial na ekranie i tylko zabieral miejsce. */
-  #gvBackWrap{position:absolute;left:10px;top:10px;z-index:4}
+  /* Powrot do calego planu pokazuje sie DOPIERO po wyborze osoby albo stolu: bez wyboru
+     nie ma dokad wracac, a przycisk wisial na ekranie i tylko zabieral miejsce. */
+  #gvBackWrap{position:absolute;left:12px;top:12px;z-index:4}
   #gvBackWrap[hidden]{display:none}
-  #gvBackAll{display:flex;align-items:center;gap:7px;border:1px solid var(--line);
-             background:var(--panel);border-radius:999px;padding:8px 15px 8px 12px;
-             cursor:pointer;font:inherit;font-size:14px;box-shadow:var(--shadow)}
-  #gvBackAll:hover{border-color:var(--accent);color:var(--accent)}
-  #gvBackAll .arr{font-size:17px;line-height:1}
+  /* Sama strzalka, bez podpisu: napis „Cały plan" zabieral pas nad mapa, a strzalka
+     w rogu czyta sie jak „wstecz" w kazdej aplikacji i nie zaslania planu. */
+  #gvBackAll{display:flex;align-items:center;justify-content:center;width:40px;height:40px;
+             border:1px solid var(--line);background:var(--panel);border-radius:50%;
+             cursor:pointer;padding:0;box-shadow:var(--shadow);color:var(--ink);
+             transition:transform .15s ease,border-color .15s ease,color .15s ease}
+  #gvBackAll svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.1;
+                 stroke-linecap:round;stroke-linejoin:round}
+  #gvBackAll:hover{border-color:var(--accent);color:var(--accent);transform:translateX(-2px)}
+  #gvBackAll:active{transform:translateX(-2px) scale(.94)}
+  @media (prefers-reduced-motion:reduce){#gvBackAll{transition:none}}
   #gvResults{position:absolute;left:0;right:0;top:calc(100% + 5px);background:var(--panel);
              border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
              max-height:250px;overflow:auto;z-index:5;display:none}
@@ -445,9 +451,17 @@
   #gvListBody .grp{padding:9px 14px;background:#faf9f7;font-weight:600;font-size:13px;
                    border-bottom:1px solid var(--line);position:sticky;top:0}
   .gvlHead .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  #gvCard{flex:none;background:var(--panel);border-top:1px solid var(--line);padding:14px 16px;display:none}
+  #gvCard{flex:none;background:var(--panel);border-top:1px solid var(--line);padding:14px 16px;
+          display:none;position:relative}
   #gvCard.show{display:block}
-  #gvCard .big{font-size:21px;font-weight:600;margin-bottom:3px}
+  /* „x" tam, gdzie gosc patrzy — przy swoim imieniu. Wczesniej jedyne wyjscie z wybranej
+     osoby bylo w polu wyszukiwania, ktore na telefonie bywa juz przewiniete poza ekran. */
+  #gvCardClose{position:absolute;right:10px;top:10px;width:32px;height:32px;border-radius:50%;
+               border:1px solid var(--line);background:var(--panel);color:var(--muted);
+               font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;
+               justify-content:center}
+  #gvCardClose:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  #gvCard .big{font-size:21px;font-weight:600;margin-bottom:3px;padding-right:40px}
   #gvCard .sub{color:var(--muted);font-size:13px;margin-bottom:9px}
   .seatpill{display:inline-block;background:var(--accent);color:#fff;border-radius:999px;
             padding:4px 14px;font-size:15px;font-weight:600}
@@ -550,6 +564,10 @@
   .seat-num{font:400 15px -apple-system,"Segoe UI",Roboto,sans-serif;text-anchor:middle;
             dominant-baseline:central;fill:#a09a90;pointer-events:none}
   .seat-lock{font:400 14px sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#8c6b4f}
+  /* W planerze podpisy musza byc „przezroczyste" dla myszy, zeby nie przeszkadzaly
+     w przeciaganiu. W widoku goscia jest odwrotnie: dotkniecie nazwiska to najbardziej
+     naturalny sposob wybrania osoby, wiec podpis ma byc celem, a nie dziura w planie. */
+  #gvCanvas text.seat-name,#gvCanvas text.seat-num{pointer-events:auto;cursor:pointer}
   .zone{fill:rgba(140,107,79,.09);stroke:#8c6b4f;stroke-dasharray:14 9;stroke-width:2.5;cursor:move}
   .zone-label{font:400 24px -apple-system,"Segoe UI",Roboto,sans-serif;text-anchor:middle;
               dominant-baseline:central;fill:#8c6b4f;pointer-events:none;letter-spacing:.09em}
@@ -815,7 +833,9 @@
       <div id="gvListBody"></div>
     </div>
     <div id="gvBackWrap" hidden>
-      <button id="gvBackAll" data-gv="zoom-fit"><span class="arr">←</span>Cały plan</button>
+      <button id="gvBackAll" data-gv="zoom-fit" title="Wróć do całej sali" aria-label="Wróć do całej sali">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5 8 12l6.5 7"/></svg>
+      </button>
     </div>
     <div class="float zoombar wide-only" style="right:10px;bottom:10px">
       <button class="btn" data-gv="zoom-out">−</button>
@@ -823,6 +843,7 @@
     </div>
   </div>
   <div id="gvCard">
+    <button id="gvCardClose" type="button" title="Wróć do całej sali" aria-label="Wróć do całej sali">✕</button>
     <div class="big" id="gvName"></div>
     <div class="sub" id="gvSeat"></div>
     <div class="mates" id="gvMates"></div>
@@ -2157,7 +2178,7 @@ function renderScene(svg, s, opts = {}) {
   const { selection: sel = null, badSeats = new Set(), highlight = null,
           interactive = true, showNumbers = true, showNames = true, markSeat = null, colorBy = "group",
           foundSeats = null, pxPerUnit = 1, namesOnlyTable = null, viewW = null, viewX = null,
-          nameFont = null } = opts;
+          nameFont = null, jedenPoziom = false } = opts;
   svg.replaceChildren();
 
   const defs = el("defs");
@@ -2182,13 +2203,26 @@ function renderScene(svg, s, opts = {}) {
   for (const z of s.zones) svg.append(zoneNode(z, sel, interactive));
   const roomMap = sideRoom(s.tables);
   const opcje = { sel, badSeats, highlight, interactive, showNumbers, showNames, markSeat, colorBy,
-                  foundSeats, viewW, viewX, nameFont, pxPerUnit, namesOnlyTable, sideRoom: roomMap };
+                  foundSeats, viewW, viewX, nameFont, pxPerUnit, namesOnlyTable, jedenPoziom,
+                  sideRoom: roomMap };
   // Jeden prog dla stolow tej samej wielkosci. Decyzja podejmowana osobno przy kazdym stole
   // dawala mozaike: przy jednym stole pelne nazwiska, przy identycznym obok same numery,
   // bo jedno dluzsze nazwisko przewazylo szale. Stoly o tej samej liczbie miejsc przelaczaja
   // sie teraz razem — jednoczesnie, przy tym samym przyblizeniu.
   opcje.wspolnyPoziom = poziomyWgWielkosci(s, opcje);
   for (const t of s.tables) svg.append(tableNode(t, s, opcje));
+  // Punkt odniesienia dla zywej korekty rozmiaru podpisow (patrz `zywyRozmiarPodpisow`).
+  if (viewW) { svg.dataset.lzBase = String(viewW); svg.style.setProperty("--lz", "1"); }
+}
+
+/**
+ * Utrzymuje podpisy w tej samej wielkosci NA EKRANIE miedzy przerysowaniami. Podpisy sa
+ * zapisane w jednostkach planu, wiec same w sobie rosna i maleja razem z nim; ta korekta
+ * to odwraca. Jeden zapis wlasciwosci na klatke zamiast przerysowania calej sali.
+ */
+function zywyRozmiarPodpisow(svg, v) {
+  const baza = Number(svg.dataset.lzBase);
+  if (baza > 0 && v.w > 0) svg.style.setProperty("--lz", String(v.w / baza));
 }
 
 /**
@@ -2352,14 +2386,25 @@ function tableNode(t, s, o) {
         txt.dataset.rot = String(-t.rotation);
       }
       txt.style.textAnchor = anchor;
-      txt.style.fontSize = label.size + "px";
+      // W widoku interaktywnym rozmiar zapisujemy przez zmienna `--lz`. Dzieki temu podczas
+      // szczypania i kręcenia kółkiem wystarczy JEDEN zapis na klatke, zeby podpisy zostaly
+      // tej samej wielkosci na ekranie. Przerysowanie calej sali kosztuje na telefonie
+      // 35–90 ms, wiec robienie tego co klatke nie wchodzi w gre, a bez korekty napisy
+      // pecznialy razem z planem i po puszczeniu palca skakaly do wlasciwej wielkosci.
+      txt.style.fontSize = o.showNames === "auto"
+        ? `calc(var(--lz, 1) * ${label.size}px)` : label.size + "px";
       if (label.lines.length === 1) {
         txt.textContent = label.lines[0];
       } else {
         // Wiele linii: pierwszą podnosimy o pół wysokości bloku, żeby całość
         // pozostała wyśrodkowana na wysokości krzesła.
+        // Odstepy miedzy wierszami w „em", a nie w jednostkach planu: dzieki temu ida za
+        // rozmiarem pisma takze wtedy, gdy ten jest korygowany na zywo podczas szczypania.
+        // Przy zapisie w jednostkach planu litery zostawaly te same, a odstep miedzy nimi
+        // rosl — dwuwierszowy podpis rozjezdzal sie w trakcie gestu.
         label.lines.forEach((ln, k) => {
-          const ts = el("tspan", { x: lx, dy: k === 0 ? -(label.lines.length - 1) * label.size * 0.52 : label.size * 1.04 });
+          const dy = k === 0 ? -(label.lines.length - 1) * 0.52 : 1.04;
+          const ts = el("tspan", { x: lx, dy: dy.toFixed(3) + "em" });
           ts.textContent = ln;
           txt.append(ts);
         });
@@ -2395,6 +2440,11 @@ function render() {
 const NAME_FONT = 16;          // rozmiar podpisu przy eksporcie (jednostki świata = cm)
 const LABEL_TARGET_PX = 13;    // docelowa wysokość podpisu NA EKRANIE
 const LABEL_MIN_PX = 7;        // poniżej tego nie ma sensu nic pisać
+// Numer miejsca to jeden–dwa znaki i czyta sie go jeszcze przy 7 px. Nazwisko przy takim
+// rozmiarze jest juz tylko szara kreska, wiec ma wlasny, wyzszy prog: dopoki plan nie jest
+// przyblizony na tyle, zeby podpisy byly czytelne, cala sala pokazuje numery.
+const NAME_MIN_PX = 11;
+const POZIOM_NUMERY = 4;       // „nie miesci sie nawet samo imie" — same numery
 
 /**
  * Rozmiar podpisu w jednostkach świata. Na ekranie ma być stały — jak etykieta
@@ -2525,7 +2575,11 @@ function labelRoom(t, geo, anchor, size, viewW, room, pion, doKrawedzi, jedenSto
   const pitch = t.shape === "round"
     ? (2 * Math.PI * (geo.r + SEAT_GAP + SEAT_R + 20)) / Math.max(1, t.seats)
     : geo.len / Math.max(1, geo.top, geo.bot);
-  return Math.min(pitch, doKrawedzi ?? Infinity);
+  // Podpisy dwoch sasiednich krzesel sa wysrodkowane nad nimi, wiec na jeden przypada
+  // dokladnie rozstaw krzesel. Zostawiamy z tego mala przerwe: przy pelnym wykorzystaniu
+  // rozstawu (i przy tym, ze szerokosc napisu tylko szacujemy) nazwiska stykaly sie
+  // literami i czytalo sie „DąbrowskiNowakowska".
+  return Math.min(pitch * 0.92, doKrawedzi ?? Infinity);
 }
 
 /**
@@ -2551,6 +2605,13 @@ function poziomyWgWielkosci(s, o) {
     const lvl = tableNameLevel(t, tableGeom(t), o, s);
     out.set(klucz, Math.max(out.get(klucz) ?? 0, lvl));
   }
+  // Widok gościa bez wybranej osoby: albo podpisy przy WSZYSTKICH krzesłach, albo przy
+  // żadnym. Mozaika „tu nazwiska, tam numerki" wyglądała jak usterka, a gość i tak nie wie,
+  // czemu akurat jego stół wypadł po gorszej stronie progu.
+  if (o.jedenPoziom && out.size) {
+    const wspolny = Math.max(...out.values());
+    for (const k of out.keys()) out.set(k, wspolny);
+  }
   return out;
 }
 
@@ -2560,6 +2621,13 @@ function tableNameLevel(t, geo, o, plan) {
   // i cały stół wychodził zawsze na poziomie „pełne nazwisko".
   const src = (plan && plan.guests) || state.guests;
   const size = labelFontWorld(o);
+  if (size * (o.pxPerUnit || 1) < NAME_MIN_PX) return POZIOM_NUMERY;   // za drobne, by cokolwiek przeczytac
+  // Krawedz ekranu decyduje o poziomie WYLACZNIE przy dobieraniu kadru (`scisleKrawedzie`).
+  // W zwyklym oglądaniu planu nie moze: gosc, ktory przyblizyl sie do stolu bardziej niz
+  // wynosi dobrany kadr, traci wtedy WSZYSTKIE podpisy przez jedno krzeslo przy brzegu —
+  // a to wlasnie ono jest i tak w polowie poza ekranem. Podpis moze wyjsc poza kadr;
+  // przesuniecie planu palcem pokazuje go w calosci.
+  const zKrawedzia = !!o.scisleKrawedzie;
   let level = 0;
   for (let i = 0; i < t.seats; i++) {
     const g = src.find(x => x.id === t.assign[i]);
@@ -2569,7 +2637,8 @@ function tableNameLevel(t, geo, o, plan) {
     const world = ((p.a + t.rotation) * Math.PI) / 180;
     const anchor = Math.cos(world) > 0.4 ? "start" : Math.cos(world) < -0.4 ? "end" : "middle";
     const room = labelRoom(t, geo, anchor, size, o.viewW, o.sideRoom && o.sideRoom.get(t.id),
-                           odstepPionowy(t, i, anchor), doKrawedzi(t, p, anchor, size, o),
+                           odstepPionowy(t, i, anchor),
+                           zKrawedzia ? doKrawedzi(t, p, anchor, size, o) : undefined,
                            !!o.namesOnlyTable);
     const pion = odstepPionowy(t, i, anchor);
     if (window.__d4) window.__d4.push({ i, anchor, room: Math.round(room), pion: isFinite(pion)?Math.round(pion):'inf', size: Math.round(size), n: fullName(g) });
@@ -2599,6 +2668,7 @@ function seatLabel(t, geo, i, guest, anchor, o) {
   // `spreadLabels`, które ma do dyspozycji cały arkusz, a nie ciasny ekran.
   if (o.showNames === true) return { lines: nameForms(guest)[0] || [shortName(guest)], size, isName: true };
   if (o.showNames !== "auto" || !readable) return number;
+  if (size * o.pxPerUnit < NAME_MIN_PX) return number;    // ten sam prog, co przy wyborze poziomu
   // Widok gościa: dopóki nikogo nie wybrano, cała sala jest numerowana. Nazwiska
   // pokazujemy dopiero przy stole, który gościa faktycznie dotyczy.
   if (o.namesOnlyTable && t.id !== o.namesOnlyTable) return number;
@@ -3487,10 +3557,20 @@ function animateView(svg, v, cel, { ms = null, onFrame, onDone, przedRuchem } = 
 
 /** Kadr po przybliżeniu o `factor` wokół środka — bez ruszania `v`. */
 function zoomTarget(svg, v, factor) {
-  const gora = Math.max(20000, v.w);
-  const nw = clamp(v.w * factor, 250, gora), k = nw / v.w;
+  const nw = clamp(v.w * factor, 250, sufitOddalenia(svg, v)), k = nw / v.w;
   const cx = v.x + v.w / 2, cy = v.y + v.h / 2;
   return { w: nw, h: v.h * k, x: cx - nw / 2, y: cy - (v.h * k) / 2 };
+}
+
+/**
+ * Najwieksza dopuszczalna szerokosc kadru. W planerze to sztywne 20 000 (stol da sie
+ * przeciagnac daleko poza sale), ale w widoku goscia oddalanie bez konca nie ma sensu:
+ * plan robi sie plamka posrodku pustego ekranu i gosc traci punkt odniesienia. Sufit
+ * ustepuje temu, co juz jest na ekranie — inaczej „−" potrafiloby PRZYBLIZYC widok.
+ */
+function sufitOddalenia(svg, v) {
+  const podstawa = svg === gvCanvas && gvKadrCalosci ? gvKadrCalosci.w * 2 : 20000;
+  return Math.max(podstawa, v.w);
 }
 
 function zoomAt(svg, v, cx, cy, factor) {
@@ -3499,11 +3579,7 @@ function zoomAt(svg, v, cx, cy, factor) {
   // Kanwa o zerowych wymiarach (panel jeszcze schowany, karta w trakcie animacji) daje
   // NaN, ktore wchodzilo prosto do `viewBox` i gasilo caly widok. Lepiej nie zrobic nic.
   if (!isFinite(p.x) || !isFinite(p.y)) return;
-  // Sztywny sufit 20 000 dawal absurd przy planie szerszym niz 200 m (stol da sie
-  // przeciagnac daleko poza sale): widok otwieral sie na 26 000, wiec „−" ZWEZALO go do
-  // 20 000, czyli przyblizalo. Sufit musi ustepowac temu, co juz jest na ekranie.
-  const gora = Math.max(20000, v.w);
-  const nw = clamp(v.w * factor, 250, gora);
+  const nw = clamp(v.w * factor, 250, sufitOddalenia(svg, v));
   const k = nw / v.w;
   v.x = p.x - (p.x - v.x) * k;
   v.y = p.y - (p.y - v.y) * k;
@@ -3566,12 +3642,13 @@ function attachPinch(svg, v, onEnd) {
     const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const k = clamp(gesture.dist / dist, 0.1, 10);
-    v.w = clamp(gesture.view.w * k, 250, 20000);
+    v.w = clamp(gesture.view.w * k, 250, sufitOddalenia(svg, gesture.view));
     v.h = gesture.view.h * (v.w / gesture.view.w);
     const { s, r } = viewScale(svg, v);
     v.x = gesture.world.x - (mid.x - r.left - (r.width - v.w * s) / 2) / s;
     v.y = gesture.world.y - (mid.y - r.top - (r.height - v.h * s) / 2) / s;
     applyView(svg, v);
+    zywyRozmiarPodpisow(svg, v);
     if (svg === canvas) updateZoomLabel();
   });
   const drop = e => {
@@ -3888,6 +3965,7 @@ let zoomRedraw;
 canvas.addEventListener("wheel", e => {
   e.preventDefault();
   zoomAt(canvas, view, e.clientX, e.clientY, clamp(Math.exp(e.deltaY * 0.0015), 0.3, 3));
+  zywyRozmiarPodpisow(canvas, view);
   updateZoomLabel();
   // podpisy mają stały rozmiar na ekranie, więc każda zmiana przybliżenia
   // może odsłonić albo schować nazwiska — przerysowujemy po ustaniu ruchu
@@ -6297,7 +6375,7 @@ function fitGuestView(plynnie = false) {
   // Na telefonie świadomie przybliżamy mocniej, niż wynika z „zmieść wszystko": pionowy ekran
   // przy szerokiej sali marnował dwie trzecie wysokości, a plan był nieczytelny. Część planu
   // wychodzi wtedy poza ekran — na telefonie to uczciwa zamiana, bo przesuwanie palcem jest
-  // naturalne, a przycisk „Cały plan" zawsze wraca do pełnego widoku.
+  // naturalne, a strzałka w rogu zawsze wraca do pełnego widoku.
   // Świadomie NIE przybliżamy ponad „zmieść wszystko". Szeroka sala na pionowym ekranie
   // telefonu nie wypełni go bez ucięcia brzegów, a widok otwierający ma pokazywać całość —
   // gość najpierw chce zobaczyć układ sali, dopiero potem szuka siebie. Zysk bierze się
@@ -6306,9 +6384,32 @@ function fitGuestView(plynnie = false) {
   w /= k; h /= k;
 
   const cel = { x: cx - w / 2, y: cy - h / 2, w, h };
+  gvKadrCalosci = { ...cel };
+  gvCelKadru = { ...cel };
   if (plynnie) animateView(gvCanvas, gvView, cel,
-                           { przedRuchem: () => gvRender(cel) });
+                           { przedRuchem: () => gvRender(cel), onDone: gvOdswiezKontrolki });
   else { Object.assign(gvView, cel); applyView(gvCanvas, gvView); }
+  gvOdswiezKontrolki();
+}
+
+/** Kadr „cała sala", zapamietany przy ostatnim dopasowaniu. */
+let gvKadrCalosci = null;
+/** Kadr, do ktorego wlasnie trwa dojazd — o widocznosci strzalki decyduje CEL, nie polozenie
+ *  w polowie drogi. Inaczej strzalka mrugala przez cala animacje powrotu. */
+let gvCelKadru = null;
+
+/**
+ * Czy gosc odszedl od widoku calej sali. Bez tego strzalka powrotu pokazywala sie WYLACZNIE
+ * po wybraniu osoby — kto przyblizyl albo przesunal plan palcem, zostawal bez drogi powrotu
+ * i musial przeladowac strone.
+ */
+function gvPozaCaloscia() {
+  const b = gvKadrCalosci, v = gvCelKadru || gvView;
+  if (!b || !b.w) return false;
+  if (Math.abs(v.w - b.w) / b.w > 0.08) return true;
+  const dx = (v.x + v.w / 2) - (b.x + b.w / 2);
+  const dy = (v.y + v.h / 2) - (b.y + b.h / 2);
+  return Math.hypot(dx, dy) > b.w * 0.08;
 }
 
 /**
@@ -6323,7 +6424,11 @@ function gvRender(kadr) {
   renderScene(gvCanvas, gvState, {
     interactive: false, highlight: gvHighlight, markSeat: gvMine,
     showNumbers: true, showNames: "auto",
-    namesOnlyTable: gvHighlight || "\u0000",   // brak wyboru → sama numeracja
+    // Z wybraną osobą podpisy tylko przy JEJ stole (reszta sali przygasa i nie rozprasza).
+    // Bez wyboru — cała sala na jednym poziomie: po przybliżeniu pojawiają się wszystkie
+    // imiona naraz, a dopóki się nie mieszczą, wszędzie są numery miejsc.
+    namesOnlyTable: gvHighlight,
+    jedenPoziom: !gvHighlight,
     pxPerUnit: viewScale(gvCanvas, k).s,
     viewW: k.w, viewX: k.x,
   });
@@ -6357,15 +6462,16 @@ function gvZoomSpan(t, maxExt) {
  */
 function gvSpanZNazwiskami(t, span, maxExt, r, ar) {
   const geo = tableGeom(t);
-  const podloga = maxExt * 1.05;      // ciasniej stol zaczyna byc obcinany
-  const probuj = s => {
+  const probuj = (s, scisle) => {
     const w = ar >= 1 ? s * ar : s, h = w / ar;
     const px = Math.min((r.width || 1) / w, (r.height || 1) / h);
     return tableNameLevel(t, geo, {
-      showNames: "auto", namesOnlyTable: t.id, pxPerUnit: px,
+      showNames: "auto", namesOnlyTable: t.id, pxPerUnit: px, scisleKrawedzie: scisle,
       viewW: w, viewX: t.x - w / 2, sideRoom: sideRoom(gvState.tables),
     }, gvState);
   };
+  const zakres = (od, doo) => { const out = []; for (let s = od; s <= doo; s *= 1.07) out.push(s); return out; };
+
   // Dwa ograniczenia ciagna w PRZECIWNE strony, wiec szukac trzeba w obie:
   //   • podpis z boku konkuruje z krawedzia ekranu — pomaga ODDALENIE (stol malenie,
   //     robi sie miejsca po bokach), bo napis ma staly rozmiar w pikselach;
@@ -6373,15 +6479,47 @@ function gvSpanZNazwiskami(t, span, maxExt, r, ar) {
   //     pomaga ZBLIZENIE, bo napis maleje w skali planu.
   // Stol okragly zwykle blokuje sie na pierwszym, prostokatny na drugim. Skanowanie tylko
   // w jedna strone zostawialo prostokatne stoly z samymi numerami przy kazdym przyblizeniu.
-  const brakNazwisk = 4;                    // tyle wynosi poziom „same numery"
-  const kandydaci = [];
-  for (let s = podloga; s <= maxExt * 3.4; s *= 1.07) kandydaci.push(s);
-  const pasujace = kandydaci.filter(s => probuj(s) < brakNazwisk);
-  if (!pasujace.length) return span;
-  // Kadr naturalny (`span`) niesie juz sensowna zaleznosc od liczby miejsc — im wiecej
-  // krzesel, tym ciasniej. Odchodzimy od niego tylko o tyle, o ile trzeba, zeby nazwiska
-  // sie zmiescily: z pasujacych bierzemy ten NAJBLIZSZY naturalnemu.
-  return pasujace.reduce((a, b) => (Math.abs(b - span) < Math.abs(a - span) ? b : a));
+  const widacNazwiska = (s, scisle) => probuj(s, scisle) < POZIOM_NUMERY;
+
+  // 1. Kadr, w ktorym miesci sie CALY stol. Kadr naturalny (`span`) niesie juz sensowna
+  //    zaleznosc od liczby miejsc, wiec z pasujacych bierzemy NAJBLIZSZY jemu.
+  const caly = zakres(maxExt * 1.05, maxExt * 3.4).filter(s => widacNazwiska(s, true));
+  if (caly.length) return caly.reduce((a, b) => (Math.abs(b - span) < Math.abs(a - span) ? b : a));
+
+  // 2. Nic nie pasuje? Dlugi stol z dlugimi imionami (np. 10 osob w rzedzie na telefonie)
+  //    nie pokaze podpisow przy ZADNYM kadrze obejmujacym calosc: rozstaw krzesel jest staly
+  //    w skali planu, a podpis ma staly rozmiar na ekranie. Wtedy lepiej przyciac stol niz
+  //    zostawic gosciowi same numerki — wybieramy najszerszy kadr, przy ktorym widac imiona,
+  //    a `kadrNaMiejscu` przesuwa go potem ku krzeslu goscia.
+  const przyciety = zakres(maxExt * 0.5, maxExt * 1.05).filter(s => widacNazwiska(s, false));
+  if (przyciety.length) return Math.max(...przyciety);
+  return span;
+}
+
+/**
+ * Kadr o zadanych wymiarach wysrodkowany na stole — a gdy stol sie w nim nie miesci,
+ * przesuniety ku krzeslu goscia, zeby to WLASNIE JEGO podpis byl na ekranie. Przesuwamy
+ * najwyzej tyle, by kadr nie wyjechal poza obrys stolu (inaczej pol ekranu byloby puste).
+ */
+function kadrNaMiejscu(t, index, cw, ch) {
+  const e = tableExtent(t);
+  let cx = t.x, cy = t.y;
+  const p = index >= 0 ? seatPositions(t)[index] : null;
+  if (p) {
+    const rad = ((t.rotation || 0) * Math.PI) / 180;
+    const sx = t.x + p.x * Math.cos(rad) - p.y * Math.sin(rad);
+    const sy = t.y + p.x * Math.sin(rad) + p.y * Math.cos(rad);
+    // Przesuwamy kadr TYLKO wtedy, gdy stol i tak sie w nim nie miesci — inaczej stol
+    // uciekalby z osrodka ekranu bez powodu. Podpis goscia lezy poza obrysem blatu, wiec
+    // w tej sytuacji pozwalamy kadrowi wyjsc odrobine dalej niz sam stol: bez tego wlasne
+    // imie — jedyne, ktorego gosc szuka — bywalo przyciete krawedzia ekranu.
+    const zapas = 0.2;
+    const lx = cw < e.w ? (e.w - cw) / 2 + cw * zapas : 0;
+    const ly = ch < e.h ? (e.h - ch) / 2 + ch * zapas : 0;
+    cx = clamp(sx, t.x - lx, t.x + lx);
+    cy = clamp(sy, t.y - ly, t.y + ly);
+  }
+  return { w: cw, h: ch, x: cx - cw / 2, y: cy - ch / 2 };
 }
 
 function gvSeatOf(guestId) {
@@ -6398,11 +6536,66 @@ function gvOdswiezKontrolki() {
   const pole = $("#gvSearch"), x = $("#gvClear"), powrot = $("#gvBackWrap");
   if (!pole || !x || !powrot) return;
   x.hidden = !(pole.value.trim() || gvHighlight);
-  powrot.hidden = !gvHighlight;
+  powrot.hidden = !gvHighlight && !gvPozaCaloscia();
+}
+
+/** Punkt planu w ukladzie stolu (bez obrotu i przesuniecia). */
+function doUkladuStolu(t, pkt) {
+  const rad = ((t.rotation || 0) * Math.PI) / 180;
+  const dx = pkt.x - t.x, dy = pkt.y - t.y;
+  return { x: dx * Math.cos(rad) + dy * Math.sin(rad), y: -dx * Math.sin(rad) + dy * Math.cos(rad) };
+}
+
+/** Czy punkt lezy na samym blacie (a nie przy krzesle albo na podpisie). */
+function naBlacie(t, pkt) {
+  const geo = tableGeom(t), p = doUkladuStolu(t, pkt);
+  return t.shape === "round" ? Math.hypot(p.x, p.y) <= geo.r
+                             : Math.abs(p.x) <= geo.len / 2 && Math.abs(p.y) <= geo.w / 2;
+}
+
+/** Indeks krzesla najblizszego punktowi (we wspolrzednych planu). */
+function najblizszeKrzeslo(t, pkt) {
+  const p = doUkladuStolu(t, pkt);
+  let best = -1, bestD = Infinity;
+  seatPositions(t).forEach((q, i) => {
+    const d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+/**
+ * Dotkniecie planu. Krzeslo z osoba wybiera te osobe (tak jak wpisanie jej w wyszukiwarce),
+ * a dotkniecie samego stolu przybliza do niego i pokazuje przy nim podpisy. Wolane z
+ * `pointerup`, bo przechwycony wskaznik nie dostarcza uzytecznego zdarzenia „click".
+ */
+function gvDotkniecie(node, pkt) {
+  if (!node || !gvState) return;
+  const t = gvState.tables.find(x => x.id === node.dataset.table);
+  if (!t) return;
+  // Co dokladnie zostalo dotkniete, rozstrzyga GEOMETRIA, a nie to, w jaki element SVG
+  // trafil palec: palec jest szerszy niz krzeslo, nad krzeslem wybranej osoby lezy jeszcze
+  // pulsujaca poswiata, a podpis to osobny element obok. Zasada jest prosta — blat znaczy
+  // „pokaz caly stol", wszystko poza blatem (krzeslo, poswiata, podpis) znaczy „ta osoba".
+  if (pkt && !naBlacie(t, pkt)) {
+    const g = gvState.guests.find(x => x.id === t.assign[najblizszeKrzeslo(t, pkt)]);
+    if (g) return gvSelect(g);
+  }
+  if (gvHighlight === t.id) return;           // drugie dotkniecie tego samego stolu nic nie zmienia
+  gvHighlight = t.id; gvMine = null; gvCelKadru = null;
+  $("#gvCard").classList.remove("show");
+  gvOdswiezKontrolki();
+  const ext = tableExtent(t), maxExt = Math.max(ext.w, ext.h);
+  const r = gvCanvas.getBoundingClientRect(), ar = (r.width || 1) / (r.height || 1);
+  const span = gvSpanZNazwiskami(t, gvZoomSpan(t, maxExt), maxExt, r, ar);
+  const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
+  const cel = kadrNaMiejscu(t, -1, cw, ch);
+  animateView(gvCanvas, gvView, cel, { przedRuchem: () => gvRender(cel) });
 }
 
 function gvSelect(guest) {
   const at = gvSeatOf(guest.id);
+  gvCelKadru = null;
   $("#gvResults").classList.remove("show");
   $("#gvSearch").value = fullName(guest);
   if (!at) {
@@ -6454,7 +6647,7 @@ function gvSelect(guest) {
   const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
   // Plynne dojscie zamiast skoku: gosc widzi, DOKAD plan sie przesunal, wiec nie musi
   // od nowa szukac punktu odniesienia w sali.
-  const cel = { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 };
+  const cel = kadrNaMiejscu(t, at.index, cw, ch);
   animateView(gvCanvas, gvView, cel,
               { przedRuchem: () => gvRender(cel) });   // podpisy od razu docelowe
 }
@@ -6578,32 +6771,13 @@ function initGuestView() {
   gvInited = true;
 
   $("#gvExit").addEventListener("click", exitPreview);
-  // Dotknięcie stołu przybliża do niego. Bez tego jedyną drogą do własnego miejsca
-  // było szczypanie palcami po mapie wielkości znaczka pocztowego.
-  gvCanvas.addEventListener("click", e => {
-    const node = e.target.closest("[data-table]");
-    if (!node || !gvState) return;
-    const t = gvState.tables.find(x => x.id === node.dataset.table);
-    if (!t) return;
-    const first = t.assign.find(Boolean);
-    const g = first && gvState.guests.find(x => x.id === first);
-    if (g) return gvSelect(g);
-    gvHighlight = t.id;
-    gvOdswiezKontrolki();
-    const ext = tableExtent(t), span = gvZoomSpan(t, Math.max(ext.w, ext.h));
-    const r = gvCanvas.getBoundingClientRect(), ar = (r.width || 1) / (r.height || 1);
-    const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
-    const cel = { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 };
-    animateView(gvCanvas, gvView, cel, { przedRuchem: () => gvRender(cel) });
-  });
 
   $("#gvTabs").addEventListener("click", e => {
     const b = e.target.closest("button[data-tab]");
     if (b && gvState) gvSetTab(b.dataset.tab);
   });
-  // Powrót do widoku całej sali. Jeden mechanizm dla wszystkich dróg: przycisk „Cały plan"
-  // w pasku przybliżenia, wyczyszczenie pola wyszukiwania krzyżykiem i klawisz Escape.
-  // Osobny przycisk „← Cała sala" nad mapą był drugim sposobem na to samo i tylko zabierał miejsce.
+  // Powrót do widoku całej sali. Jeden mechanizm dla wszystkich dróg: strzałka w rogu mapy,
+  // krzyżyk przy imieniu na karcie, krzyżyk w polu wyszukiwania i klawisz Escape.
   window.gvShowAll = () => {
     gvHighlight = null; gvMine = null;
     $("#gvCard").classList.remove("show");
@@ -6620,7 +6794,7 @@ function initGuestView() {
     markSearching();
     gvOdswiezKontrolki();
     // Krzyżyk w polu wyszukiwania czyści je do pustego — wtedy wracamy do całej sali,
-    // dokładnie tak jak po kliknięciu „Cały plan".
+    // dokładnie tak jak po strzałce w rogu mapy.
     if (!$("#gvSearch").value.trim()) return gvShowAll();
     gvSearchInput(e);
   });
@@ -6629,6 +6803,10 @@ function initGuestView() {
     $("#gvSearch").value = "";
     gvShowAll();
     $("#gvSearch").focus();
+  });
+  $("#gvCardClose").addEventListener("click", () => {
+    $("#gvSearch").value = "";
+    gvShowAll();
   });
   $("#gvSearch").addEventListener("keydown", e => { if (e.key === "Escape") gvShowAll(); });
   $("#gvSearch").addEventListener("focus", e => { markSearching(); gvSearchInput(e); });
@@ -6642,7 +6820,10 @@ function initGuestView() {
   // Kontroler gestu MUSI być przypisany: bez tego przesuwanie nie wie, że trwa szczypanie,
   // reaguje na drugi palec jak na osobne przeciąganie i nadpisuje pozycję ustawioną przez
   // pinch — mapa skacze w stronę pierwszego palca zamiast przybliżać się w punkcie gestu.
-  const gvPinch = attachPinch(gvCanvas, gvView, gvRender);
+  // Po kazdym gescie: przerysowanie (podpisy licza sie od nowa dla nowego przyblizenia)
+  // i odswiezenie strzalki powrotu, bo szczypanie tez wyprowadza z widoku calej sali.
+  const poGescie = () => { gvCelKadru = null; gvRender(); gvOdswiezKontrolki(); };
+  const gvPinch = attachPinch(gvCanvas, gvView, poGescie);
   let gvDrag = null;
   gvCanvas.addEventListener("pointerdown", e => {
     if (e.button !== 0) return;
@@ -6650,11 +6831,17 @@ function initGuestView() {
     try { gvCanvas.setPointerCapture(e.pointerId); } catch (_) {}
     const p = clientToWorld(gvCanvas, gvView, e.clientX, e.clientY);
     stopViewAnim(gvCanvas);        // palec jest wazniejszy niz trwajaca animacja
-    gvDrag = { id: e.pointerId, x: p.x, y: p.y, view: { ...gvView } };
+    // Cel dotkniecia zapamietujemy TU, a nie przy zdarzeniu „click". Po `setPointerCapture`
+    // przegladarka kieruje pozniejszy „click" na sam <svg>, wiec `e.target.closest` w tamtym
+    // miejscu zawsze zwracalo null i dotkniecie stolu nie robilo nic.
+    gvDrag = { id: e.pointerId, x: p.x, y: p.y, view: { ...gvView }, moved: false,
+               sx: e.clientX, sy: e.clientY,
+               stol: e.target.closest && e.target.closest("[data-table]") };
   });
   gvCanvas.addEventListener("pointermove", e => {
     if (!gvDrag || e.pointerId !== gvDrag.id) return;      // drugi palec należy do gestu, nie do przesuwania
     if (gvPinch.isPinching()) { gvDrag = null; return; }
+    if (Math.hypot(e.clientX - gvDrag.sx, e.clientY - gvDrag.sy) > 8) gvDrag.moved = true;
     // Odwzorowanie liczone z widoku SPRZED chwycenia — inaczej powstaje pętla sprzężenia
     // i mapa drga, tak jak drgała w planerze.
     const p = clientToWorld(gvCanvas, gvDrag.view, e.clientX, e.clientY, null);
@@ -6662,16 +6849,22 @@ function initGuestView() {
     gvView.y = gvDrag.view.y - (p.y - gvDrag.y);
     applyView(gvCanvas, gvView);
   });
-  const stop = () => (gvDrag = null);
-  gvCanvas.addEventListener("pointerup", stop);
-  gvCanvas.addEventListener("pointercancel", stop);
+  gvCanvas.addEventListener("pointerup", e => {
+    const d = gvDrag;
+    gvDrag = null;
+    if (!d || e.pointerId !== d.id || gvPinch.isPinching()) return;
+    if (d.moved) { gvCelKadru = null; return gvOdswiezKontrolki(); }   // przesuniecie planu: sama strzalka
+    gvDotkniecie(d.stol, { x: d.x, y: d.y });
+  });
+  gvCanvas.addEventListener("pointercancel", () => (gvDrag = null));
 
   let gvRedraw;
   gvCanvas.addEventListener("wheel", e => {
     e.preventDefault();
     zoomAt(gvCanvas, gvView, e.clientX, e.clientY, clamp(Math.exp(e.deltaY * 0.0015), 0.3, 3));
+    zywyRozmiarPodpisow(gvCanvas, gvView);
     clearTimeout(gvRedraw);
-    gvRedraw = setTimeout(gvRender, 60);
+    gvRedraw = setTimeout(poGescie, 60);
   }, { passive: false });
 
   document.addEventListener("click", e => {
