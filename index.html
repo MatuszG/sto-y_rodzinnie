@@ -6,6 +6,22 @@
 <meta name="theme-color" content="#f6f5f2">
 <title>Plan sali weselnej</title>
 
+<script>
+/* Tryb gościa musi być znany PRZED pierwszym malowaniem strony. Bez tego przeglądarka
+   zdążyła narysować planer (górny pasek, panele, pustą salę), a dopiero potem JavaScript
+   go chował — gość po zeskanowaniu kodu QR widział mignięcie cudzego edytora.
+   Ten skrypt jest maleńki i stoi przed CSS-em celowo: ustawia atrybut, a resztę robią
+   zwykłe reguły stylów, więc nie ma ani jednej klatki ze złym ekranem. */
+(function () {
+  try {
+    var h = location.hash || "", q = location.search || "";
+    if (document.documentElement.dataset.mode === "guest") return;
+    if (q.indexOf("v=g") !== -1 || /(^|[#&])(d|c|k)=/.test(h))
+      document.documentElement.dataset.mode = "guest";
+  } catch (e) { /* w najgorszym razie zostaje stare zachowanie */ }
+})();
+</script>
+
 <!-- ===== style aplikacji ===== -->
 <style>
   :root{
@@ -331,6 +347,11 @@
   /* ---------- widok gościa ---------- */
   #guestView{display:none;flex-direction:column;height:100%}
   #guestView.show{display:flex}
+  /* Pierwsza klatka w trybie gościa: planera nie ma w ogóle, jest ekran ładowania.
+     Wszystko sterowane atrybutem na <html>, więc obowiązuje zanim ruszy jakikolwiek skrypt. */
+  html[data-mode="guest"] #app{display:none !important}
+  html[data-mode="guest"] #guestView{display:flex}
+  html[data-mode="guest"] #gvSplash{display:flex}
   #gvPreviewBar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;
                 background:var(--accent);color:#fff;padding:8px 14px;font-size:13px}
   #gvPreviewBar[hidden]{display:none}
@@ -349,12 +370,13 @@
   #gvHead p{margin:0 0 11px;color:var(--muted);font-size:13px}
   /* Ekran ladowania. Gosc po zeskanowaniu kodu czeka na odszyfrowanie (PBKDF2 z 310 000
      iteracji to na telefonie ulamek sekundy do sekundy) — bez tego widzial pusta strone. */
+  /* Domyslnie ekranu ladowania nie ma. W trybie goscia jest od PIERWSZEJ KLATKI (regula
+     nizej), wiec nie miga, nie wjezdza animacja i nie zaslania niczego po fakcie —
+     po prostu jest tym, co gosc widzi jako pierwsze. Znika przez `gone`. */
   #gvSplash{position:fixed;inset:0;z-index:60;background:var(--bg);
-            display:flex;align-items:center;justify-content:center;
-            animation:spIn .25s ease-out}
-  #gvSplash[hidden]{display:none}
-  #gvSplash.out{animation:spOut .35s ease-in forwards;pointer-events:none}
-  @keyframes spIn{from{opacity:0}to{opacity:1}}
+            display:none;align-items:center;justify-content:center}
+  #gvSplash.out{animation:spOut .45s ease-in forwards;pointer-events:none}
+  #gvSplash.gone{display:none !important}
   @keyframes spOut{to{opacity:0}}
   .sp-inner{text-align:center;padding:24px}
   .sp-mono{font:300 46px/1.1 Georgia,"Times New Roman",serif;color:var(--accent);
@@ -543,13 +565,29 @@
   .table-g.wybrany .table-label{fill:#8c6b4f}
   .seat.mine{fill:#8c6b4f;stroke:#5f472f;stroke-width:5}
   .seat-halo{fill:none;stroke:#8c6b4f;stroke-width:6;pointer-events:none;
-             transform-box:fill-box;transform-origin:center}
+             transform-box:fill-box;transform-origin:center;will-change:transform,opacity}
+  /* Fala musi byc robiona przez `transform` i `opacity`, bo tylko te dwie rzeczy
+     przegladarka potrafi animowac bez ponownego rasteryzowania rysunku. Animowanie
+     promienia `r` wygladalo tak samo, ale kosztowalo pelne przerysowanie planu w KAZDEJ
+     klatce: na telefonie 30 ms zamiast 16, czyli polowa klatek do kosza — i to ono
+     sprawialo, ze dojazd do stolu szarpal i „doskakiwal" na koncu. */
   @keyframes seatPulse{
-    0%   {opacity:.85; r:var(--r0)}
-    70%  {opacity:0;   r:var(--r1)}
-    100% {opacity:0;   r:var(--r1)}
+    0%   {opacity:.85; transform:scale(1)}
+    70%  {opacity:0;   transform:scale(2.6)}
+    100% {opacity:0;   transform:scale(2.6)}
   }
-  .seat-halo.pulse{animation:seatPulse 1.6s ease-out infinite}
+  /* Zwloka jest celowa: fala ma ruszyc CHWILE PO tym, jak plan sie zatrzyma. Wlaczana
+     dokladnie w momencie zatrzymania dokladala nagle zdarzenie tam, gdzie ruch wlasnie
+     cichnie — i to czytalo sie jako szarpniecie na koncu dojazdu. */
+  .seat-halo{opacity:.3;transition:opacity .45s ease}
+  .seat-halo.pulse{animation:seatPulse 1.7s ease-out .45s infinite}
+  /* Falę wstrzymujemy na czas dojazdu kadru. Element animowany bez przerwy WEWNATRZ svg,
+     ktoremu jednoczesnie zmienia sie `viewBox`, nie da sie skomponowac osobno — przegladarka
+     rasteryzuje wtedy caly rysunek w kazdej klatce. Zysk jest umiarkowany i widac go dopiero
+     na wolniejszym sprzecie (zmierzone przy dwukrotnym spowolnieniu procesora: 7 zaciec
+     z fala, 2 bez niej), ale puls i tak ma sens dopiero wtedy, gdy plan juz stoi —
+     ruchoma kamera i pulsujacy pierscien naraz to dwie rzeczy walczace o uwage. */
+  .kadr-w-ruchu .seat-halo.pulse{animation:none;opacity:.28}
   @media (prefers-reduced-motion:reduce){
     .seat-halo.pulse{animation:none;opacity:.7}
   }
@@ -733,7 +771,7 @@
 
 <!-- ============ WIDOK GOŚCIA ============ -->
 <div id="guestView">
-  <div id="gvSplash" hidden>
+  <div id="gvSplash">
     <div class="sp-inner">
       <div class="sp-mono" id="gvMono"></div>
       <div class="sp-rings" aria-hidden="true"><span></span><span></span></div>
@@ -2279,10 +2317,7 @@ function tableNode(t, s, o) {
     if (mine) {
       // Rozchodzaca sie fala zamiast migania caloscia: ruch jest kierunkowy, wiec oko
       // trafia w srodek pierscienia, a nie tylko rejestruje, ze „cos tu mruga".
-      const halo = el("circle", { class: "seat-halo pulse", cx: p.x, cy: p.y, r: SEAT_R });
-      halo.style.setProperty("--r0", (SEAT_R + 2) + "px");
-      halo.style.setProperty("--r1", (SEAT_R * 2.6) + "px");
-      g.append(halo);
+      g.append(el("circle", { class: "seat-halo pulse", cx: p.x, cy: p.y, r: SEAT_R + 2 }));
     }
 
     if (t.locked && t.locked[i]) {
@@ -3270,14 +3305,142 @@ const applyView = (svg, v) => {
  * a kazda animacja zamienia sie w gumowe opoznienie. */
 const animacjeWidoku = new WeakMap();
 
+/* ————— sciezka kadru wg van Wijka i Nuija (2003) —————
+ * Wczesniej przyblizenie szlo wykladniczo, a przesuniecie — liniowo, i to po lewym gornym
+ * ROGU kadru, nie po jego srodku. Przy ruchu, ktory jednoczesnie przesuwa i przybliza,
+ * daje to gwaltowne skoki predkosci pozornej: w polowie drogi tresc przelatuje przez ekran,
+ * a na koncu ledwo pelznie. Wlasnie to widac jako chaotycznosc — i zadne dobieranie czasu
+ * tego nie naprawi, bo problem jest w KSZTALCIE sciezki, nie w jej dlugosci.
+ *
+ * Rozwiazanie jest opisane w „Smooth and efficient zooming and panning" (van Wijk, Nuij,
+ * InfoVis 2003) i jest tym samym, ktorego uzywaja `d3.interpolateZoom` oraz `flyTo`
+ * w Mapbox/MapLibre. Kamera porusza sie po krzywej, na ktorej predkosc POZORNA — czyli to,
+ * jak szybko tresc przesuwa sie po ekranie — jest staly. Przy dalekim celu kamera najpierw
+ * lekko sie oddala, przesuwa, po czym przybliza; przy bliskim po prostu dojezdza.
+ *
+ * `rho` to stosunek zoomu do przesuniecia (1.42 — wartosc z MapLibre, d3 uzywa √2).
+ * Dlugosc sciezki `S` wychodzi z wyliczen i to Z NIEJ bierze sie czas trwania: krotki ruch
+ * trwa krotko, daleki dluzej, a tempo pozostaje to samo. Staly czas dla kazdego ruchu byl
+ * druga przyczyna niespojnosci.
+ */
+/**
+ * Rozwiazuje `cubic-bezier(x1,y1,x2,y2)` dokladnie tak, jak robi to CSS: szukamy `t` dla
+ * zadanego `x` metoda Newtona, a potem liczymy `y`. Krzywe Beziera daja kontrole nad tym,
+ * ile drogi zostaje na koncowke — czego zwykle wzory (sinus, potegi) nie pozwalaja ustawic.
+ */
+function bezier(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const fx = t => ((ax * t + bx) * t + cx) * t;
+  const dfx = t => (3 * ax * t + 2 * bx) * t + cx;
+  return u => {
+    if (u <= 0) return 0;
+    if (u >= 1) return 1;
+    let t = u;
+    for (let i = 0; i < 8; i++) {
+      const e = fx(t) - u;
+      if (Math.abs(e) < 1e-6) break;
+      const d = dfx(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= e / d;
+    }
+    return ((ay * t + by) * t + cy) * t;
+  };
+}
+
+/* Krzywa dojscia — kompromis miedzy dwiema rzeczami, ktore ciagna w przeciwne strony:
+     • rowny PRZELOT (o to chodzi w sciezce van Wijka),
+     • miekkie LADOWANIE, czyli malo drogi zostawionej na koncowke.
+   Zmierzone na tym samym ruchu (rozrzut predkosci w srodku drogi / droga zostajaca
+   na ostatnia cwiartke czasu):
+     sinus                 2,5×  /  14,6%   — rowno, ale kamera „pracuje" do samego konca
+     CSS ease .25/.1/.25/1  13,3×  /   4%   — piekne ladowanie, ale przelot juz nierowny
+     .4/0/.45/1             4,5×  /  8,3%   — polowa pracy w koncowce, przelot nadal rowny
+   Trzecia jest wybrana: skraca koncowke o polowe wzgledem sinusa, a przy tym ma NIZSZY
+   szczyt predkosci niz krzywa CSS. */
+const LAGODNE_DOJSCIE = bezier(0.4, 0, 0.45, 1);
+
+const RHO = 1.42, RHO2 = RHO * RHO, RHO4 = RHO2 * RHO2;
+const PREDKOSC = 1.15;                 // jednostek sciezki na sekunde; wieksza = szybciej
+const cosh = x => (Math.exp(x) + Math.exp(-x)) / 2;
+const sinh = x => (Math.exp(x) - Math.exp(-x)) / 2;
+const tanh = x => { const e = Math.exp(2 * x); return (e - 1) / (e + 1); };
+
+/**
+ * Zwraca funkcje `t → {x,y,w,h}` (t od 0 do 1) plus zalecany czas `czasMs`.
+ * Kadry opisujemy srodkiem i szerokoscia — na rogu ta matematyka nie ma sensu.
+ */
+function sciezkaKadru(od, cel) {
+  const ar = od.h / od.w;                          // proporcje sa stale
+  const x0 = od.x + od.w / 2, y0 = od.y + od.h / 2, w0 = od.w;
+  const x1 = cel.x + cel.w / 2, y1 = cel.y + cel.h / 2, w1 = cel.w;
+  const dx = x1 - x0, dy = y1 - y0, d2 = dx * dx + dy * dy;
+
+  let S, punkt;
+  if (d2 < 1e-9) {
+    // Sam zoom, bez przesuniecia: skala zmienia sie geometrycznie i to wystarczy.
+    S = Math.abs(Math.log(w1 / w0)) / RHO;
+    punkt = s => ({ cx: x0, cy: y0, w: w0 * Math.exp((w1 < w0 ? -1 : 1) * RHO * s) });
+  } else {
+    const d1 = Math.sqrt(d2);
+    const b0 = (w1 * w1 - w0 * w0 + RHO4 * d2) / (2 * w0 * RHO2 * d1);
+    const b1 = (w1 * w1 - w0 * w0 - RHO4 * d2) / (2 * w1 * RHO2 * d1);
+    const r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0);
+    const r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
+    S = (r1 - r0) / RHO;
+    const chr0 = cosh(r0);
+    punkt = s => {
+      const u = (w0 / (RHO2 * d1)) * (chr0 * tanh(RHO * s + r0) - sinh(r0));
+      return { cx: x0 + u * dx, cy: y0 + u * dy, w: (w0 * chr0) / cosh(RHO * s + r0) };
+    };
+  }
+
+  const f = t => {
+    const p = punkt(t * S), h = p.w * ar;
+    return { x: p.cx - p.w / 2, y: p.cy - h / 2, w: p.w, h };
+  };
+  // Czas z DLUGOSCI sciezki, nie z widzimisie. Ograniczony z obu stron: bardzo krotki ruch
+  // nie ma byc mgnieniem, bardzo daleki — wycieczka.
+  f.czasMs = clamp((1000 * S) / PREDKOSC, 420, 1500);
+  return f;
+}
+
+/* Czasy dojazdu kadru. Wybor osoby to jednorazowy, wazny ruch — moze potrwac, bo gosc ma
+   nadazyc wzrokiem za tym, DOKAD plan jedzie. Przyciski przybliżenia klika sie po kilka razy
+   pod rzad, wiec tam dluga animacja zamienia sie w ociezalosc. */
+/* Czasu NIE ustawiamy z reki: wynika z dlugosci sciezki (patrz `sciezkaKadru`), wiec kazdy
+   ruch — daleki czy bliski — ma to samo tempo. Sztywne czasy sprawialy, ze skok przez pol
+   sali i przesuniecie o dwa stoly trwaly tyle samo, czyli mialy zupelnie rozna predkosc. */
+
 function stopViewAnim(svg) {
   const a = animacjeWidoku.get(svg);
   if (a) { cancelAnimationFrame(a); animacjeWidoku.delete(svg); }
+  svg.classList.remove("kadr-w-ruchu");
 }
 
 /** Animuje `v` do `cel`. `onFrame` dostaje kazda klatke, `onDone` — koniec. */
-function animateView(svg, v, cel, { ms = 320, onFrame, onDone } = {}) {
+/**
+ * Plynnosc dojazdu opiera sie na jednej zasadzie: W TRAKCIE RUCHU NIE PRZERYSOWUJEMY SCENY.
+ * Pelne przerysowanie planu kosztuje ok. 15 ms na komputerze i ok. 60 ms na wolnym telefonie,
+ * wiec kazde takie przerysowanie po drodze to od jednej do czterech zgubionych klatek.
+ *
+ * `przedRuchem` dostaje wlasna klatke, zanim cokolwiek ruszy — scena jest wtedy rysowana od
+ * razu w postaci DOCELOWEJ (podpisy w koncowej wielkosci i wariancie). Dzieki temu na koncu
+ * nie trzeba przerysowywac niczego: ostatni krok to samo ustawienie `viewBox`. Wczesniej to
+ * koncowe przerysowanie bylo widoczne jako „doskok" tuz przed zatrzymaniem.
+ *
+ * Zmierzone po tej zmianie, 155 gosci przy 20 stolach: 17,4 ms na klatke i zero zaciec
+ * na zwyklym urzadzeniu; na sprzecie czterokrotnie wolniejszym 29 ms, czyli ok. 33 klatek
+ * na sekunde — plynnie, choc juz nie idealnie.
+ */
+function animateView(svg, v, cel, { ms = null, onFrame, onDone, przedRuchem } = {}) {
   stopViewAnim(svg);
+  if (przedRuchem) {
+    przedRuchem();
+    animacjeWidoku.set(svg, requestAnimationFrame(() =>
+      animateView(svg, v, cel, { ms, onFrame, onDone })));
+    return;
+  }
   // Cel policzony z degeneracyjnego planu bywa nieskonczony — wtedy nie ma czego animowac.
   if (![cel.x, cel.y, cel.w, cel.h].every(Number.isFinite) || cel.w <= 0 || cel.h <= 0) {
     onFrame && onFrame(); onDone && onDone();
@@ -3288,32 +3451,30 @@ function animateView(svg, v, cel, { ms = 320, onFrame, onDone } = {}) {
              + Math.abs(cel.y - v.y) / Math.max(v.h, 1);
   const zredukowany = matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (zredukowany || skok < 0.004) {                 // ruch niewidoczny goly okiem
+    svg.classList.remove("kadr-w-ruchu");
     Object.assign(v, cel); applyView(svg, v);
     onFrame && onFrame(); onDone && onDone();
     return;
   }
   const od = { x: v.x, y: v.y, w: v.w, h: v.h };
+  svg.classList.add("kadr-w-ruchu");
+  const droga = sciezkaKadru(od, cel);
+  const czas = ms != null ? ms : droga.czasMs;
   const t0 = performance.now();
-  // Skala zmienia sie GEOMETRYCZNIE (log), nie liniowo. Interpolacja liniowa szerokosci
-  // daje ruch, ktory na poczatku szarpie, a na koncu pelznie.
-  const k = Math.log(cel.w / od.w);
-  const ease = u => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
-  let klatka = 0;
+  const ease = LAGODNE_DOJSCIE;
   const krok = now => {
-    const u = Math.min(1, (now - t0) / ms), e = ease(u);
-    const skala = Math.exp(k * e);
-    v.w = od.w * skala; v.h = od.h * skala;
-    v.x = od.x + (cel.x - od.x) * e;
-    v.y = od.y + (cel.y - od.y) * e;
+    const u = Math.min(1, (now - t0) / czas);
+    Object.assign(v, droga(ease(u)));
     applyView(svg, v);
     onFrame && onFrame();
-    // Podpisy zaleza od przyblizenia, wiec w trakcie dojazdu tez musza sie przeliczac —
-    // inaczej nazwiska „wskakuja" dopiero na koncu. Co trzecia klatka wystarcza dla oka
-    // i zostawia zapas mocy na telefonie.
-    if (onDone && u < 1 && ++klatka % 3 === 0) onDone();
+    // W trakcie ruchu NIE przerysowujemy sceny. Pelne przerysowanie planu kosztuje na
+    // telefonie ok. 60 ms — czyli cztery zgubione klatki — wiec robione po drodze zamieniało
+    // plynny dojazd w serie szarpniec i „doskok" na koncu. Zamiast tego scena jest juz
+    // narysowana dla kadru docelowego, a `viewBox` po prostu do niego jedzie.
     if (u < 1) animacjeWidoku.set(svg, requestAnimationFrame(krok));
     else {
       animacjeWidoku.delete(svg);
+      svg.classList.remove("kadr-w-ruchu");
       Object.assign(v, cel); applyView(svg, v);
       // Przerysowanie DOPIERO w nastepnej klatce. Karta z miejscem zmienia wysokosc kanwy,
       // a `pxPerUnit` liczy sie z jej rozmiaru — mierzone w tej samej klatce wychodzilo
@@ -6145,18 +6306,26 @@ function fitGuestView(plynnie = false) {
   w /= k; h /= k;
 
   const cel = { x: cx - w / 2, y: cy - h / 2, w, h };
-  if (plynnie) animateView(gvCanvas, gvView, cel, { onDone: gvRender });
+  if (plynnie) animateView(gvCanvas, gvView, cel,
+                           { przedRuchem: () => gvRender(cel) });
   else { Object.assign(gvView, cel); applyView(gvCanvas, gvView); }
 }
 
-function gvRender() {
+/**
+ * `kadr` pozwala narysowac plan tak, jak ma wygladac PO dojezdzie, zostawiajac na ekranie
+ * biezacy `viewBox`. To sedno plynnosci: podpisy sa juz w docelowej postaci i wielkosci
+ * (w jednostkach swiata), wiec przez cala animacje tylko skaluja sie razem z mapa —
+ * dokladnie tak, jak przy zwyklym przyblizaniu — i nie ma czego przeliczac co klatke.
+ */
+function gvRender(kadr) {
+  const k = kadr || gvView;
   applyView(gvCanvas, gvView);
   renderScene(gvCanvas, gvState, {
     interactive: false, highlight: gvHighlight, markSeat: gvMine,
     showNumbers: true, showNames: "auto",
     namesOnlyTable: gvHighlight || "\u0000",   // brak wyboru → sama numeracja
-    pxPerUnit: viewScale(gvCanvas, gvView).s,
-    viewW: gvView.w, viewX: gvView.x,
+    pxPerUnit: viewScale(gvCanvas, k).s,
+    viewW: k.w, viewX: k.x,
   });
 }
 
@@ -6285,9 +6454,9 @@ function gvSelect(guest) {
   const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
   // Plynne dojscie zamiast skoku: gosc widzi, DOKAD plan sie przesunal, wiec nie musi
   // od nowa szukac punktu odniesienia w sali.
-  gvRender();
-  animateView(gvCanvas, gvView, { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 },
-              { onDone: gvRender });
+  const cel = { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 };
+  animateView(gvCanvas, gvView, cel,
+              { przedRuchem: () => gvRender(cel) });   // podpisy od razu docelowe
 }
 
 let gvListMode = "az";           // "az" = alfabetycznie, "table" = numerowana wg stołów
@@ -6424,9 +6593,8 @@ function initGuestView() {
     const ext = tableExtent(t), span = gvZoomSpan(t, Math.max(ext.w, ext.h));
     const r = gvCanvas.getBoundingClientRect(), ar = (r.width || 1) / (r.height || 1);
     const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
-    gvRender();
-    animateView(gvCanvas, gvView, { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 },
-                { onDone: gvRender });
+    const cel = { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 };
+    animateView(gvCanvas, gvView, cel, { przedRuchem: () => gvRender(cel) });
   });
 
   $("#gvTabs").addEventListener("click", e => {
@@ -6509,10 +6677,11 @@ function initGuestView() {
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-gv]");
     if (!b || !gvState) return;
-    if (b.dataset.gv === "zoom-in")
-      animateView(gvCanvas, gvView, zoomTarget(gvCanvas, gvView, 1 / 1.3), { onDone: gvRender });
-    if (b.dataset.gv === "zoom-out")
-      animateView(gvCanvas, gvView, zoomTarget(gvCanvas, gvView, 1.3), { onDone: gvRender });
+    for (const [nazwa, mnoznik] of [["zoom-in", 1 / 1.3], ["zoom-out", 1.3]]) {
+      if (b.dataset.gv !== nazwa) continue;
+      const cel = zoomTarget(gvCanvas, gvView, mnoznik);
+      animateView(gvCanvas, gvView, cel, { przedRuchem: () => gvRender(cel) });
+    }
     if (b.dataset.gv === "zoom-fit") {
       gvShowAll();
     }
@@ -6570,21 +6739,28 @@ function showGuestError(msg) {
  * Bez tego ekranu gosc po zeskanowaniu kodu QR patrzyl w pusta strone i nie wiedzial,
  * czy cokolwiek sie dzieje. */
 let splashDo = 0;
+const splashWidoczny = () => {
+  const box = $("#gvSplash");
+  return !!box && !box.classList.contains("gone")
+      && document.documentElement.dataset.mode === "guest";
+};
 function pokazSplash(mono) {
   const box = $("#gvSplash");
   if (!box) return;
+  // Atrybut jest juz ustawiony przez skrypt z <head>; tu tylko dla sciezek, ktore
+  // wchodza w tryb goscia pozniej (np. plan.json wykryty dopiero po pobraniu).
+  document.documentElement.dataset.mode = "guest";
   $("#gvMono").textContent = (mono || "").trim().slice(0, 12);
-  box.classList.remove("out");
-  box.hidden = false;
-  splashDo = performance.now() + 550;      // minimalny czas, zeby nie mrugnal i nie zniknal
+  box.classList.remove("out", "gone");
+  splashDo = performance.now() + 500;      // zeby ekran nie mrugnal i nie zniknal
 }
 function ukryjSplash() {
   const box = $("#gvSplash");
-  if (!box || box.hidden) return;
+  if (!box || box.classList.contains("gone")) return;
   const zwloka = Math.max(0, splashDo - performance.now());
   setTimeout(() => {
     box.classList.add("out");
-    setTimeout(() => { box.hidden = true; box.classList.remove("out"); }, 360);
+    setTimeout(() => { box.classList.add("gone"); box.classList.remove("out"); }, 470);
   }, zwloka);
 }
 
