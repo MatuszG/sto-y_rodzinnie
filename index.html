@@ -45,7 +45,13 @@
   #left{grid-column:1}
   main{grid-column:2}
   #right{grid-column:3}
-  #app.noleft #left, #app.noright #right{display:none}
+  /* Zwijanie dotyczy WYLACZNIE ukladu kolumnowego. Na telefonie panele sa nakladkami,
+     a flaga zapisana w planie na komputerze chowala je tam na zawsze: przycisk „Goscie"
+     dokladal nakladke, panel zostawal `display:none`, a zadna kontrolka na telefonie
+     nie potrafila juz tej flagi zdjac. */
+  @media (min-width:901px){
+    #app.noleft #left, #app.noright #right{display:none}
+  }
   /* Przycisk zwijania w nagłówku panelu — uchwyt przy krawędzi jest łatwy do przeoczenia,
      więc służy tylko do rozwinięcia z powrotem, gdy panelu już nie widać. */
   .foldbtn{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--muted);
@@ -226,6 +232,8 @@
   .field > label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   label.mini{display:block;font-size:11px;color:var(--muted)}
+  label.check{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px}
+  label.check input{width:auto;flex:none;margin:0;cursor:pointer}
   label.mini input{margin-top:3px}
   .empty{color:var(--muted);font-size:13px}
   .stat{display:flex;justify-content:space-between;gap:10px;padding:6px 0;
@@ -334,14 +342,55 @@
   .tabs button{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 4px;
                cursor:pointer;font:inherit;font-size:13px;color:var(--muted)}
   .tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  #gvBack{position:absolute;left:12px;top:12px;z-index:6}
-  #gvBack[hidden]{display:none}
   #gvLock[hidden],#gvFind[hidden]{display:none}
   #gvCode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;
           text-transform:uppercase;font-size:17px;text-align:center}
   #gvCodeErr{color:var(--danger);min-height:16px}
   #gvHead p{margin:0 0 11px;color:var(--muted);font-size:13px}
+  /* Ekran ladowania. Gosc po zeskanowaniu kodu czeka na odszyfrowanie (PBKDF2 z 310 000
+     iteracji to na telefonie ulamek sekundy do sekundy) — bez tego widzial pusta strone. */
+  #gvSplash{position:fixed;inset:0;z-index:60;background:var(--bg);
+            display:flex;align-items:center;justify-content:center;
+            animation:spIn .25s ease-out}
+  #gvSplash[hidden]{display:none}
+  #gvSplash.out{animation:spOut .35s ease-in forwards;pointer-events:none}
+  @keyframes spIn{from{opacity:0}to{opacity:1}}
+  @keyframes spOut{to{opacity:0}}
+  .sp-inner{text-align:center;padding:24px}
+  .sp-mono{font:300 46px/1.1 Georgia,"Times New Roman",serif;color:var(--accent);
+           letter-spacing:.06em;min-height:52px}
+  .sp-rings{position:relative;width:76px;height:38px;margin:18px auto 0}
+  .sp-rings span{position:absolute;top:0;width:34px;height:34px;border-radius:50%;
+                 border:2px solid var(--accent);opacity:.5}
+  .sp-rings span:first-child{left:0;animation:ringL 1.9s ease-in-out infinite}
+  .sp-rings span:last-child{right:0;animation:ringR 1.9s ease-in-out infinite}
+  @keyframes ringL{0%,100%{transform:translateX(0)}50%{transform:translateX(9px)}}
+  @keyframes ringR{0%,100%{transform:translateX(0)}50%{transform:translateX(-9px)}}
+  .sp-txt{margin:16px 0 0;color:var(--muted);font-size:14px}
+  @media (prefers-reduced-motion:reduce){
+    #gvSplash,.sp-rings span{animation:none}
+  }
+
   #gvSearchWrap{position:relative}
+  /* Natywny „x" pola `search` jest maly, a na iOS bywa go w ogole nie widac. Wlasny
+     przycisk jest jedynym wyjsciem z wybranej osoby, wiec musi byc widoczny. */
+  #gvSearch{padding-right:44px}
+  #gvSearch::-webkit-search-cancel-button{display:none}
+  #gvClear{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+           width:32px;height:32px;border-radius:50%;border:1px solid var(--line);
+           background:var(--panel);color:var(--muted);font-size:15px;line-height:1;
+           cursor:pointer;display:flex;align-items:center;justify-content:center}
+  #gvClear:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  #gvClear[hidden]{display:none}
+  /* Powrot do calego planu pokazuje sie DOPIERO po wyborze osoby: bez wyboru nie ma
+     dokad wracac, a przycisk „Cały plan" wisial na ekranie i tylko zabieral miejsce. */
+  #gvBackWrap{position:absolute;left:10px;top:10px;z-index:4}
+  #gvBackWrap[hidden]{display:none}
+  #gvBackAll{display:flex;align-items:center;gap:7px;border:1px solid var(--line);
+             background:var(--panel);border-radius:999px;padding:8px 15px 8px 12px;
+             cursor:pointer;font:inherit;font-size:14px;box-shadow:var(--shadow)}
+  #gvBackAll:hover{border-color:var(--accent);color:var(--accent)}
+  #gvBackAll .arr{font-size:17px;line-height:1}
   #gvResults{position:absolute;left:0;right:0;top:calc(100% + 5px);background:var(--panel);
              border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
              max-height:250px;overflow:auto;z-index:5;display:none}
@@ -367,6 +416,10 @@
   #gvListBody button:hover{background:var(--accent-soft)}
   #gvListBody .where{color:var(--muted);font-size:13px;white-space:nowrap;flex:none}
   #gvListBody .num{color:var(--muted);flex:none;min-width:24px;font-variant-numeric:tabular-nums}
+  #gvListBody button.sub{padding-left:32px}
+  #gvListBody .tow{color:var(--muted)}
+  .guest.sub{margin-left:18px}
+  .guest.sub .tow{color:var(--muted)}
   #gvListBody .grp{padding:9px 14px;background:#faf9f7;font-weight:600;font-size:13px;
                    border-bottom:1px solid var(--line);position:sticky;top:0}
   .gvlHead .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -444,7 +497,9 @@
     .print-page h1{font-size:18px;margin:0 0 4px}
     .print-page h2{font-size:14px;margin:14px 0 5px}
     .print-page p.sub{margin:0 0 10px;color:#666;font-size:11px}
-    .print-page svg{width:100%;height:auto;max-height:640px}
+    /* Sztywne 640 px zostawialy dol kartki pusty, a podpisy schodzily ponizej 2 pt.
+       Milimetry sa jedyna jednostka, ktora na papierze cokolwiek znaczy. */
+    .print-page svg{width:100%;height:auto;max-height:165mm}
     table.pl{width:100%;border-collapse:collapse;font-size:11px}
     table.pl th,table.pl td{border:1px solid #ccc;padding:3px 6px;text-align:left}
     table.pl th{background:#f0eeea}
@@ -457,6 +512,8 @@
   .venue{fill:#fbfaf8;stroke:#d3cec4;stroke-width:3}
   .table-body{fill:#fff;stroke:#b9b2a6;stroke-width:2.5}
   .table-g.selected .table-body{stroke:#8c6b4f;stroke-width:5}
+  .table-g.poza-rozpiska .table-body{stroke-dasharray:9 6;stroke:#a09a90}
+  .table-g.poza-rozpiska .table-label{fill:#a09a90}
   .table-g.dim{opacity:.28}
   .table-label{font:600 26px -apple-system,"Segoe UI",Roboto,sans-serif;text-anchor:middle;
                dominant-baseline:central;fill:#2b2925;pointer-events:none}
@@ -476,8 +533,26 @@
               dominant-baseline:central;fill:#8c6b4f;pointer-events:none;letter-spacing:.09em}
   .zone-g.selected .zone{stroke-width:5;stroke-dasharray:none}
   .handle{fill:#fff;stroke:#8c6b4f;stroke-width:2.5;cursor:nwse-resize}
-  .highlight{fill:none;stroke:#8c6b4f;stroke-width:8;pointer-events:none}
+  /* Ramka wokol calego stolu mrygala i przy stole 4-osobowym byla wielka wzgledem tresci,
+     wiec ruch przyciagal oko donikad. Stol dostaje spokojne, statyczne tlo (gosc szuka
+     najpierw stolu), a pulsuje samo krzeslo (potem szuka miejsca przy nim). */
+  /* Wyrozniamy BLAT stolu, a nie prostokat wokol niego: podpisy gosci wychodza poza obrys
+     krzesel, wiec kazda ramka na zewnatrz przecinala imie i nazwisko. Blat jest w srodku,
+     nic tam nie pisze poza nazwa stolu — kolizja jest niemozliwa. */
+  .table-g.wybrany .table-body{fill:#f6efe7;stroke:#8c6b4f;stroke-width:4}
+  .table-g.wybrany .table-label{fill:#8c6b4f}
   .seat.mine{fill:#8c6b4f;stroke:#5f472f;stroke-width:5}
+  .seat-halo{fill:none;stroke:#8c6b4f;stroke-width:6;pointer-events:none;
+             transform-box:fill-box;transform-origin:center}
+  @keyframes seatPulse{
+    0%   {opacity:.85; r:var(--r0)}
+    70%  {opacity:0;   r:var(--r1)}
+    100% {opacity:0;   r:var(--r1)}
+  }
+  .seat-halo.pulse{animation:seatPulse 1.6s ease-out infinite}
+  @media (prefers-reduced-motion:reduce){
+    .seat-halo.pulse{animation:none;opacity:.7}
+  }
   .seat.found{stroke:#8c6b4f;stroke-width:7}
   .seat.source{opacity:.45;stroke-dasharray:6 4}
   .seat-name.found{font-weight:700;fill:#8c6b4f}
@@ -575,7 +650,8 @@
         <div class="row" id="bulkIdle"><span class="spacer"></span>
           <button class="btn sm ghost" id="pickVisible">Zaznacz widoczne</button></div>
         <div id="bulkActive" hidden>
-          <div>Zaznaczono <b id="bulkN">0</b></div>
+          <div>Zaznaczono <b id="bulkN">0</b>
+            <span id="bulkHidden" class="note" style="display:block;margin-top:2px" hidden></span></div>
           <div class="row" style="margin-top:6px">
             <select id="bulkGroup"></select>
             <button class="btn sm" id="bulkSetGroup">Ustaw grupę</button>
@@ -657,6 +733,13 @@
 
 <!-- ============ WIDOK GOŚCIA ============ -->
 <div id="guestView">
+  <div id="gvSplash" hidden>
+    <div class="sp-inner">
+      <div class="sp-mono" id="gvMono"></div>
+      <div class="sp-rings" aria-hidden="true"><span></span><span></span></div>
+      <p class="sp-txt" id="gvSplashTxt">Otwieramy plan sali…</p>
+    </div>
+  </div>
   <div id="gvPreviewBar" hidden>
     <span>Podgląd — dokładnie to zobaczą goście po zeskanowaniu kodu.</span>
     <button class="btn sm" id="gvExit">Wróć do edycji</button>
@@ -674,8 +757,10 @@
     </div>
     <div class="row" id="gvFind">
       <div id="gvSearchWrap" style="flex:1">
-        <input type="search" id="gvSearch" placeholder="Nazwisko albo numer miejsca" autocomplete="off"
+        <input type="search" id="gvSearch" placeholder="Wpisz swoje imię i nazwisko" autocomplete="off"
                autocorrect="off" autocapitalize="words" spellcheck="false">
+        <button id="gvClear" type="button" hidden aria-label="Wyczyść i pokaż cały plan"
+                title="Wyczyść i pokaż cały plan">✕</button>
         <div id="gvResults"></div>
       </div>
     </div>
@@ -687,14 +772,15 @@
   </div>
   <div id="gvCanvasWrap">
     <svg id="gvCanvas"></svg>
-    <button class="btn" id="gvBack" hidden>← Cała sala</button>
     <div id="gvList" hidden>
       <div class="gvlHead"><span id="gvListTitle">Wszyscy goście</span></div>
       <div id="gvListBody"></div>
     </div>
-    <div class="float zoombar" style="right:10px;bottom:10px">
+    <div id="gvBackWrap" hidden>
+      <button id="gvBackAll" data-gv="zoom-fit"><span class="arr">←</span>Cały plan</button>
+    </div>
+    <div class="float zoombar wide-only" style="right:10px;bottom:10px">
       <button class="btn" data-gv="zoom-out">−</button>
-      <button class="btn" data-gv="zoom-fit">Cały plan</button>
       <button class="btn" data-gv="zoom-in">+</button>
     </div>
   </div>
@@ -938,8 +1024,12 @@ function searchGuests(list, query) {
   for (const g of list) {
     const first = norm(g.firstName), last = norm(g.lastName);
     const full = `${first} ${last}`.trim();
+    // Nasz wlasny eksport tekstowy pisze „Kowalski Jan", wiec ludzie tak wpisuja. Bez tej
+    // drugiej postaci dokladne trafienie bylo brane za przyblizone i gosc czytal nad swoim
+    // wlasnym nazwiskiem „Nie ma dokladnie takiego wpisu".
+    const odwrotnie = last ? `${last} ${first}`.trim() : "";
     let score = 0, exact = false;
-    if (full.includes(q)) { score = 200; exact = true; }
+    if (full.includes(q) || (odwrotnie && odwrotnie.includes(q))) { score = 200; exact = true; }
     else {
       let sum = 0, all = true;
       for (const t of tokens) {
@@ -995,6 +1085,9 @@ function makeTable(shape, x, y, label, seats) {
     seats: n,
     assign: new Array(n).fill(null),
     locked: new Array(n).fill(false),
+    // Flaga jest NEGATYWNA celowo: brak pola znaczy „pokazuj", wiec kazdy istniejacy
+    // plan zachowuje sie jak dotad i zadna migracja nie jest potrzebna.
+    bezRozpiski: false,
   };
   if (shape === "rect") {
     t.w = 92;                                       // szerokość blatu w cm
@@ -1055,7 +1148,7 @@ function emptyState() {
     version: MODEL_VERSION,
     meta: { name: "Nasze wesele", date: "", venue: { w: 2000, h: 1400 }, baseUrl: "", colorBy: "group",
             colors: { ...DEFAULT_COLORS }, modes: ["child", "diet", "rsvp"], legendOpen: null,   // null = rozwinięta na dużym ekranie, zwinięta na telefonie
-            protect: false, shareKey: "", accessCode: "" },
+            protect: false, shareKey: "", accessCode: "", monogram: "" },
     groups: DEFAULT_GROUPS.map(g => ({ ...g })),
     attrs: defaultAttrs(),
     guests: [], rules: [], tables: [], zones: [],
@@ -1171,7 +1264,13 @@ function tableExtent(t) {
   // o kilka metrów — ramka zaznaczenia i zbliżenie w widoku gościa były za szerokie.
   const headSpan = (g.hl > 0 ? 1 : 0) * (SEAT_GAP + SEAT_R) * 2
                  + (g.hr > 0 ? 1 : 0) * (SEAT_GAP + SEAT_R) * 2;
-  return { w: g.len + headSpan, h: g.w + (SEAT_GAP + SEAT_R) * 2 };
+  const w = g.len + headSpan, h = g.w + (SEAT_GAP + SEAT_R) * 2;
+  // Obrocony stol zajmuje inny prostokat niz nieobrocony. Bez tego widok gościa
+  // otwieral sie na kadrze liczonym dla 0° i obcinal krzesla stolu ustawionego w pionie.
+  const rad = ((t.rotation || 0) * Math.PI) / 180;
+  if (!rad) return { w, h };
+  const c = Math.abs(Math.cos(rad)), sn = Math.abs(Math.sin(rad));
+  return { w: w * c + h * sn, h: w * sn + h * c };
 }
 
 /* --------------------------- persystencja i projekty ----------------------
@@ -1186,13 +1285,26 @@ const INDEX_KEY  = "wesele.index.v1";
 const LEGACY_KEY = "wesele-plan-v2";
 const planKey = id => `wesele.plan.${id}`;
 
+/** Co powiedziec czlowiekowi zaraz po starcie, jesli wczytywanie poszlo nie tak. */
+let startowyKomunikat = "";
+
 let projects = { active: null, list: [] };
 
+/** Klucze, ktorych tresc jest w pamieci, ale nie da sie jej sparsowac. Trzymamy je osobno,
+ *  zeby NIGDY ich nie nadpisac — uszkodzony JSON czlowiek moze jeszcze odzyskac recznie,
+ *  ale tylko dopoki bajty tam leza. */
+const uszkodzoneKlucze = new Set();
 function readJson(key) {
-  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }
-  catch (e) { console.warn("Odczyt nieudany:", key, e); return null; }
+  let raw = null;
+  try { raw = localStorage.getItem(key); } catch (e) { console.warn("Odczyt nieudany:", key, e); return null; }
+  if (raw === null || raw === "") return null;
+  try { const v = JSON.parse(raw); uszkodzoneKlucze.delete(key); return v; }
+  catch (e) { console.warn("Nieczytelna zawartość:", key, e); uszkodzoneKlucze.add(key); return null; }
 }
 function writeJson(key, value) {
+  // Nadpisanie nieczytelnego klucza skasowaloby jedyna kopie danych, ktora dalo sie
+  // jeszcze odczytac recznie. Wolimy zglosic blad niz po cichu zniszczyc plan.
+  if (uszkodzoneKlucze.has(key)) { console.warn("Pomijam zapis do uszkodzonego klucza:", key); return false; }
   try { localStorage.setItem(key, JSON.stringify(value)); return true; }
   catch (e) { console.warn("Zapis nieudany:", key, e); return false; }
 }
@@ -1223,12 +1335,38 @@ const activeProject = () => projectById(projects.active);
  * przenosi stary, pojedynczy plan do projektu — ale STAREGO KLUCZA NIE KASUJE.
  * Gdyby migracja okazała się wadliwa, plan wciąż da się odzyskać ręcznie.
  */
+/** Wszystkie plany lezace w pamieci, niezaleznie od tego, co mowi indeks. Ratunek na wypadek,
+ *  gdyby indeks byl nieczytelny — bez tego minelibysmy nowy projekt i osierocili prawdziwe plany. */
+function odzyskajPlanyZPamieci() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith("wesele.plan.")) continue;
+    const plan = readJson(k);
+    if (!plan) continue;
+    out.push({ id: k.slice("wesele.plan.".length),
+               name: (plan.meta && plan.meta.name) || "Odzyskany plan",
+               updatedAt: Date.now(), github: null });
+  }
+  return out;
+}
+
 function loadProjects() {
   const idx = readJson(INDEX_KEY);
   if (idx && Array.isArray(idx.list) && idx.list.length) {
     projects = { active: idx.active, list: idx.list };
     if (!projectById(projects.active)) projects.active = projects.list[0].id;
     return readJson(planKey(projects.active));
+  }
+  // Indeks jest, ale nieczytelny — nie wolno zaczynac od zera, bo plany dalej leza w pamieci.
+  if (uszkodzoneKlucze.has(INDEX_KEY)) {
+    const ocalone = odzyskajPlanyZPamieci();
+    if (ocalone.length) {
+      projects = { active: ocalone[0].id, list: ocalone };
+      startowyKomunikat = `Spis projektów był uszkodzony — odtworzyliśmy go z ${ocalone.length} ${
+        ocalone.length === 1 ? "planu" : "planów"} znalezionych w pamięci przeglądarki.`;
+      return readJson(planKey(projects.active));
+    }
   }
   const legacy = readJson(LEGACY_KEY) || readJson("wesele-plan-poc-v1");
   const id = uid("pr");
@@ -1249,13 +1387,18 @@ function save() {
 function flushSave() {
   clearTimeout(saveTimer);
   const p = activeProject();
-  if (!p) return;
-  if (!writeJson(planKey(p.id), state))
-    return toast("Nie udało się zapisać — pamięć przeglądarki jest pełna. Zapisz kopię planu na dysk.", 8000);
+  if (!p) return true;
+  if (!writeJson(planKey(p.id), state)) {
+    toast(uszkodzoneKlucze.has(planKey(p.id))
+      ? "Zapis wstrzymany: dane tego projektu w pamięci przeglądarki są uszkodzone. Zapisz kopię planu na dysk."
+      : "Nie udało się zapisać — pamięć przeglądarki jest pełna. Zapisz kopię planu na dysk.", 8000);
+    return false;   // wywolujacy MUSI to sprawdzic, inaczej porzucimy niezapisana prace
+  }
   p.updatedAt = Date.now();
   p.stats = { guests: state.guests.length, tables: state.tables.length };
   saveIndex();
   renderProjectLabel();
+  return true;
 }
 
 /** Ile miejsca zajmują nasze klucze (przybliżenie: 2 bajty na znak UTF-16). */
@@ -1284,10 +1427,24 @@ function adoptState(next) {
 function switchProject(id) {
   const p = projectById(id);
   if (!p || id === projects.active) return;
-  flushSave();
+  // Bez zapisu biezacego projektu przelaczenie skasowaloby niezapisana prace,
+  // bo adoptState czysci `state` razem z historia cofania.
+  if (!flushSave()) return;
+  const plan = readJson(planKey(id));
+  if (!plan) {
+    // Druga karta mogla skasowac ten projekt. Zostajemy tam, gdzie jestesmy —
+    // wejscie w pusty projekt konczylo sie zapisem BIEZACEGO planu pod cudzym kluczem.
+    toast(`Nie udało się otworzyć „${p.name}" — dane tego projektu zniknęły z pamięci przeglądarki.`, 8000);
+    const i = projects.list.findIndex(x => x.id === id);
+    if (i !== -1 && !uszkodzoneKlucze.has(planKey(id))) { projects.list.splice(i, 1); removedProjects.add(id); }
+    saveIndex();
+    renderProjectLabel();
+    return;
+  }
+  const poprzedni = projects.active;
   projects.active = id;
-  saveIndex();
-  adoptState(readJson(planKey(id)));
+  if (!saveIndex()) { projects.active = poprzedni; return; }
+  adoptState(plan);
 }
 
 function createProject(name, st) {
@@ -1310,8 +1467,12 @@ function createProject(name, st) {
 function renameProject(id, name) {
   const p = projectById(id);
   if (!p) return;
+  const stara = p.name;
   p.name = (name || "").trim() || p.name;
-  saveIndex();
+  if (!saveIndex()) {
+    p.name = stara;   // inaczej UI pokazuje nowa nazwe, a po odswiezeniu wraca stara
+    toast("Nie udało się zapisać nazwy — pamięć przeglądarki jest pełna.", 6000);
+  }
   renderProjectLabel();
 }
 
@@ -1353,7 +1514,15 @@ function deleteProject(id) {
 
 /* --------------------------- stan i historia ----------------------------- */
 
-let state = migrate(loadProjects()) || demoState();
+const wczytany = loadProjects();
+// Uszkodzony plan aktywnego projektu wygladal dotad jak pierwsze uruchomienie: pokazywalismy
+// plan demonstracyjny i zapisywalismy go na miejsce oryginalu. Teraz zaczynamy od pustego
+// planu (demo dopisaloby zmyslonych gosci) i mowimy wprost, co sie stalo.
+const planUszkodzony = !wczytany && projects.active && uszkodzoneKlucze.has(planKey(projects.active));
+if (planUszkodzony)
+  startowyKomunikat = "Dane tego projektu w pamięci przeglądarki są uszkodzone. " +
+                      "Nie nadpisujemy ich — wczytaj kopię planu z pliku albo z GitHuba.";
+let state = migrate(wczytany) || (planUszkodzony ? emptyState() : demoState());
 let selection = null;          // {kind:'table'|'zone'|'seat'|'guest', id, seatIndex?}
 let history = [], future = [];
 
@@ -1431,17 +1600,28 @@ function discardSnapshot() {
   if (futureBeforeSnapshot) { future.length = 0; future.push(...futureBeforeSnapshot); }
   futureBeforeSnapshot = null;
 }
+/**
+ * Cofniecie podmienia CALY `state` na swiezo sparsowany obiekt, wiec kazde otwarte okno
+ * trzyma domkniecia nad starymi, odlaczonymi grupami i kategoriami. Edycja w takim oknie
+ * szla w prozne — pole pokazywalo nowa nazwe, a plan zostawal przy starej. Zamykamy okno,
+ * zamiast pozwalac mu udawac, ze dziala.
+ */
+function odswiezPoHistorii() {
+  selection = null;
+  if (typeof modalWrap !== "undefined" && modalWrap && modalWrap.classList.contains("show")) closeModal();
+  render();
+}
 function undo() {
   if (!history.length) return;
   future.push(JSON.stringify(state));
   state = JSON.parse(history.pop());
-  selection = null; render();
+  odswiezPoHistorii();
 }
 function redo() {
   if (!future.length) return;
   history.push(JSON.stringify(state));
   state = JSON.parse(future.pop());
-  selection = null; render();
+  odswiezPoHistorii();
 }
 
 /* -------------------------------- toast ---------------------------------- */
@@ -1736,7 +1916,12 @@ async function squeeze(bytes, mode) {
 function publicPayload(s = state) {
   const seated = [];
   const idx = new Map();
-  for (const t of s.tables)
+  // Stoly wylaczone z rozpiski odpadaja JUZ TUTAJ, a nie dopiero przy wyswietlaniu.
+  // Plan dla gosci jedzie w kodzie QR albo do publicznego repozytorium, wiec „schowane
+  // w interfejsie" znaczyloby „wypisane otwartym tekstem dla kazdego, kto zajrzy w link".
+  const stoly = s.tables.filter(wRozpisce);
+  const ukryci = ukryciGoscieIds(s);
+  for (const t of stoly)
     for (const gid of t.assign) {
       if (!gid || idx.has(gid)) continue;
       const g = s.guests.find(x => x.id === gid);
@@ -1747,8 +1932,12 @@ function publicPayload(s = state) {
   // Osoby jeszcze nierozsadzone też muszą trafić do planu dla gości — inaczej ktoś,
   // komu nie przydzielono miejsca, dostaje „nie znaleźliśmy takiej osoby", czyli komunikat
   // sugerujący błąd pisowni zamiast prawdy.
-  const unseated = s.guests.filter(g => !idx.has(g.id) && g.rsvp !== "no")
-                           .map(g => [g.firstName, g.lastName]);
+  // `ukryci` MUSI byc odjete takze tutaj. Bez tego goscie ze schowanego stolu przestaliby
+  // miec miejsce i wpadliby do worka „bez przypisanego miejsca" — czyli uslugodawcy byliby
+  // wypisani z nazwiska, tylko w gorszej rubryce. Dokladnie odwrotnie do zamiaru.
+  const bezMiejsca = s.guests.filter(g => !idx.has(g.id) && !ukryci.has(g.id) && g.rsvp !== "no");
+  bezMiejsca.forEach((g, j) => idx.set(g.id, seated.length + j));   // pelna mapa id → pozycja w `g`
+  const unseated = bezMiejsca.map(g => [g.firstName, g.lastName]);
   return {
     v: 3,                                   // v1 miał w polu [6] flagę `heads`; czytamy oba
     n: s.meta.name || "",
@@ -1756,8 +1945,17 @@ function publicPayload(s = state) {
     r: [s.meta.venue.w, s.meta.venue.h],
     g: seated.concat(unseated),
     u: unseated.length,                     // ile ostatnich pozycji w `g` nie ma miejsca
+    // Powiazanie „+1 → gospodarz" jako indeksy w `g`. Bez niego lista alfabetyczna
+    // u goscia nie umiala wciac osoby towarzyszacej pod wlasciwa osoba i wyrzucala ja
+    // gdzies pod litere „T", bez sladu, czyim jest osoczem.
+    p: (() => {
+      const pary = [];
+      for (const g of s.guests)
+        if (g.plusOneOf && idx.has(g.id) && idx.has(g.plusOneOf)) pary.push([idx.get(g.id), idx.get(g.plusOneOf)]);
+      return pary.length ? pary : undefined;
+    })(),
     z: s.zones.map(z => [z.label, z.x, z.y, z.w, z.h]),
-    t: s.tables.map(t => [
+    t: stoly.map(t => [
       t.label, t.shape === "round" ? 0 : 1, t.x, t.y, t.rotation, t.seats,
       t.shape === "round" ? 0 : [t.top, t.bot, t.hl, t.hr, t.w],
       t.assign.map(id => (idx.has(id) ? idx.get(id) : -1)),
@@ -1837,8 +2035,12 @@ async function encryptWithCode(payload, code) {
   const key = await keyFromCode(code, salt, PBKDF2_ITER);
   const inner = new TextEncoder().encode(await encodeShare(payload));
   const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, inner);
+  // `mono` celowo NIE jest szyfrowany: ekran ladowania pokazuje go, ZANIM kod zadziala.
+  // Uzytkownik dostaje o tym ostrzezenie przy polu w Ustawieniach.
+  const mono = (state.meta.monogram || "").trim().slice(0, 12);
   return { enc: "PBKDF2-AES-GCM", v: 1, it: PBKDF2_ITER, salt,
-           iv: b64url.enc(iv), data: b64url.enc(new Uint8Array(ct)) };
+           iv: b64url.enc(iv), data: b64url.enc(new Uint8Array(ct)),
+           ...(mono ? { mono } : {}) };
 }
 
 async function decryptWithCode(file, code) {
@@ -1916,7 +2118,8 @@ let view = { x: -120, y: -120, w: 2240, h: 1640 };
 function renderScene(svg, s, opts = {}) {
   const { selection: sel = null, badSeats = new Set(), highlight = null,
           interactive = true, showNumbers = true, showNames = true, markSeat = null, colorBy = "group",
-          foundSeats = null, pxPerUnit = 1, namesOnlyTable = null, viewW = null, nameFont = null } = opts;
+          foundSeats = null, pxPerUnit = 1, namesOnlyTable = null, viewW = null, viewX = null,
+          nameFont = null } = opts;
   svg.replaceChildren();
 
   const defs = el("defs");
@@ -1939,14 +2142,54 @@ function renderScene(svg, s, opts = {}) {
   }
 
   for (const z of s.zones) svg.append(zoneNode(z, sel, interactive));
-  for (const t of s.tables) svg.append(tableNode(t, s, { sel, badSeats, highlight, interactive, showNumbers, showNames, markSeat, colorBy, foundSeats, viewW, nameFont,
-       pxPerUnit, namesOnlyTable }));
+  const roomMap = sideRoom(s.tables);
+  const opcje = { sel, badSeats, highlight, interactive, showNumbers, showNames, markSeat, colorBy,
+                  foundSeats, viewW, viewX, nameFont, pxPerUnit, namesOnlyTable, sideRoom: roomMap };
+  // Jeden prog dla stolow tej samej wielkosci. Decyzja podejmowana osobno przy kazdym stole
+  // dawala mozaike: przy jednym stole pelne nazwiska, przy identycznym obok same numery,
+  // bo jedno dluzsze nazwisko przewazylo szale. Stoly o tej samej liczbie miejsc przelaczaja
+  // sie teraz razem — jednoczesnie, przy tym samym przyblizeniu.
+  opcje.wspolnyPoziom = poziomyWgWielkosci(s, opcje);
+  for (const t of s.tables) svg.append(tableNode(t, s, opcje));
 }
 
 /**
  * Strefa jako grupa z `transform` — przesuwanie sprowadza się wtedy do zmiany
  * jednego atrybutu zamiast przerysowywania całej kanwy przy każdym ruchu myszy.
  */
+/** Rozmiar podpisu strefy w jednostkach swiata — musi zgadzac sie z `.zone-label` w CSS. */
+const ZONE_FONT = 24;
+
+/** Przyblizona szerokosc napisu: pismo bezszeryfowe wersalikami to ok. 0,62 szerokosci
+ *  na znak. Mierzenie przez DOM przy kazdym rysowaniu kosztowaloby wiecej niz warte. */
+const zoneTextW = (txt, size) => txt.length * size * 0.62;
+
+/** Lamie podpis strefy po spacjach tak, by kazda linia zmiescila sie w szerokosci. */
+function wrapZoneLabel(txt, w, h) {
+  const slowa = txt.split(/\s+/).filter(Boolean);
+  if (slowa.length < 2) return [txt];
+  const maxLinii = Math.max(1, Math.min(slowa.length, Math.floor((h - 12) / (ZONE_FONT * 1.1))));
+  const dostepne = Math.max(24, w - 34);
+  const linie = [];
+  let biezaca = "";
+  for (const sl of slowa) {
+    const kandydat = biezaca ? biezaca + " " + sl : sl;
+    if (biezaca && zoneTextW(kandydat, ZONE_FONT) > dostepne && linie.length + 1 < maxLinii) {
+      linie.push(biezaca); biezaca = sl;
+    } else biezaca = kandydat;
+  }
+  linie.push(biezaca);
+  return linie;
+}
+
+/** Pismo zmniejszamy dopiero wtedy, gdy zlamanie na linie nie wystarczylo. */
+function zoneFont(linie, w, h) {
+  const najdluzsza = linie.reduce((m, l) => Math.max(m, l.length), 0) || 1;
+  const zSzerokosci = (w - 34) / (najdluzsza * 0.62);
+  const zWysokosci = (h - 12) / (linie.length * 1.15);
+  return clamp(Math.min(ZONE_FONT, zSzerokosci, zWysokosci), 8, ZONE_FONT);
+}
+
 function zoneNode(z, sel, interactive) {
   const on = sel && sel.kind === "zone" && sel.id === z.id;
   const g = el("g", {
@@ -1957,9 +2200,23 @@ function zoneNode(z, sel, interactive) {
   const r = el("rect", { class: "zone", x: 0, y: 0, width: z.w, height: z.h, rx: 18 });
   if (!interactive) r.style.cursor = "default";
   g.append(r);
-  const label = el("text", { class: "zone-label", x: z.w / 2, y: z.h / 2 });
-  label.textContent = (z.label || "").toUpperCase();
-  g.append(label);
+  // Podpis strefy byl pisany stalym pismem 24 jednostek, wiec „Miejsce dla zespolu
+  // muzycznego" wystawalo poza prostokat nawet przy domyslnym rozmiarze z paska narzedzi.
+  // Lamiemy po spacjach na tyle linii, ile potrzeba, i dopiero potem zmniejszamy pismo.
+  const tekst = (z.label || "").toUpperCase().trim();
+  if (tekst) {
+    const linie = wrapZoneLabel(tekst, z.w, z.h);
+    const size = zoneFont(linie, z.w, z.h);
+    const label = el("text", { class: "zone-label", x: z.w / 2, y: z.h / 2 });
+    label.style.fontSize = size + "px";
+    linie.forEach((ln, i) => {
+      const ts = el("tspan", { x: z.w / 2,
+        dy: i === 0 ? -(linie.length - 1) * size * 0.55 : size * 1.1 });
+      ts.textContent = ln;
+      label.append(ts);
+    });
+    g.append(label);
+  }
   if (on && interactive)
     g.append(el("rect", { class: "handle", x: z.w - 16, y: z.h - 16, width: 32, height: 32, rx: 7, "data-resize": z.id }));
   return g;
@@ -1973,17 +2230,17 @@ function tableNode(t, s, o) {
     transform: `translate(${t.x} ${t.y}) rotate(${t.rotation})`,
     "data-table": t.id,
   });
+  if (t.bezRozpiski && o.interactive) g.classList.add("poza-rozpiska");
   const geo = tableGeom(t);
   // Jeden sposób zapisu na cały stół — liczony raz, nie przy każdym krześle.
   const nameLevel = o.showNames === "auto" && !(o.namesOnlyTable && t.id !== o.namesOnlyTable)
-    ? tableNameLevel(t, geo, o, s) : null;
+    ? (o.wspolnyPoziom && o.wspolnyPoziom.has(`${t.shape}:${t.seats}`)
+        ? o.wspolnyPoziom.get(`${t.shape}:${t.seats}`)
+        : tableNameLevel(t, geo, o, s))
+    : null;
   o = nameLevel == null ? o : { ...o, nameLevel };
 
-  if (o.highlight === t.id) {
-    const ext = tableExtent(t);
-    g.append(el("rect", { class: "highlight pulse", x: -ext.w / 2, y: -ext.h / 2,
-                          width: ext.w, height: ext.h, rx: 40 }));
-  }
+  if (o.highlight === t.id) g.classList.add("wybrany");
 
   const body = t.shape === "round"
     ? el("circle", { class: "table-body", r: geo.r, "data-tablebody": o.interactive ? t.id : null })
@@ -2019,6 +2276,14 @@ function tableNode(t, s, o) {
     if (guest && !mine) { c.style.fill = seatColor(guest, o.colorBy); c.style.fillOpacity = .92; }
     if (!o.interactive) c.style.cursor = "default";
     g.append(c);
+    if (mine) {
+      // Rozchodzaca sie fala zamiast migania caloscia: ruch jest kierunkowy, wiec oko
+      // trafia w srodek pierscienia, a nie tylko rejestruje, ze „cos tu mruga".
+      const halo = el("circle", { class: "seat-halo pulse", cx: p.x, cy: p.y, r: SEAT_R });
+      halo.style.setProperty("--r0", (SEAT_R + 2) + "px");
+      halo.style.setProperty("--r1", (SEAT_R * 2.6) + "px");
+      g.append(halo);
+    }
 
     if (t.locked && t.locked[i]) {
       const lk = el("text", { class: "seat-lock", x: p.x, y: p.y, transform: `rotate(${-t.rotation} ${p.x} ${p.y})` });
@@ -2134,14 +2399,98 @@ const formWidth = form => form.reduce((m, s) => Math.max(m, s.length), 0);
  * Podpisy wyrównane do boku uciekają na zewnątrz stołu i mają go dużo;
  * ciasno jest tylko tam, gdzie stoją obok siebie w rzędzie.
  */
-function labelRoom(t, geo, anchor, size, viewW) {
-  // Podpis z boku ucieka na zewnątrz stołu i ma tam sporo miejsca — ale nie więcej,
-  // niż mieści ekran. Bez ograniczenia szerokością widoku „Włodzimierz Dąbrowski"
-  // wyjeżdżał poza krawędź kanwy i był ucięty w połowie.
-  if (anchor !== "middle") return Math.min(size * 26, (viewW || Infinity) * 0.3);
-  return t.shape === "round"
+/**
+ * Ile miejsca w bok ma stol, zanim wejdzie w sasiada. Podpis boczny ucieka na zewnatrz
+ * stolu, a `labelRoom` widzialo tylko szerokosc ekranu — przy stolach ustawionych obok
+ * siebie nazwiska z dwoch stolow drukowaly sie jedno na drugim i wychodzil z tego belkot
+ * w rodzaju „WMloadgjonrizeartaNS.". Liczone raz na przerysowanie, nie przy kazdym krzesle.
+ */
+function sideRoom(tables) {
+  const box = tables.map(t => { const e = tableExtent(t);
+    return { t, l: t.x - e.w / 2, r: t.x + e.w / 2, gora: t.y - e.h / 2, dol: t.y + e.h / 2 }; });
+  const out = new Map();
+  for (const a of box) {
+    let lewo = Infinity, prawo = Infinity;
+    for (const b of box) {
+      if (b.t === a.t) continue;
+      if (b.dol < a.gora || b.gora > a.dol) continue;       // nie sa na tej samej wysokosci
+      if (b.r <= a.l) lewo = Math.min(lewo, a.l - b.r);
+      else if (b.l >= a.r) prawo = Math.min(prawo, b.l - a.r);
+      else { lewo = Math.min(lewo, 0); prawo = Math.min(prawo, 0); }   // zachodza na siebie
+    }
+    // Polowa przerwy na kazda ze stron: sasiad tez chce tam pisac.
+    out.set(a.t.id, { lewo: lewo / 2, prawo: prawo / 2 });
+  }
+  return out;
+}
+
+/**
+ * Odstep do krzesla SASIEDNIEGO W KOLEJNOSCI — to z nim podpis moze sie zderzyc, bo oba
+ * uciekaja na zewnatrz obok siebie. Wczesniej brane bylo minimum po WSZYSTKICH krzeslach
+ * tej samej strony i tylko w pionie: przy okraglym stole dwa krzesla na skraju luku leza
+ * blisko siebie w pionie, choc ich podpisy rozchodza sie promieniscie, wiec caly stol
+ * niepotrzebnie schodzil do numerow.
+ */
+/** Ile swiata zostaje od krzesla do brzegu kadru w strone, w ktora biegnie napis. */
+function doKrawedzi(t, p, anchor, size, o) {
+  if (o.viewW == null || o.viewX == null) return undefined;
+  const rad = ((t.rotation || 0) * Math.PI) / 180;
+  // Podpis nie zaczyna sie na krzesle, tylko jest odsuniety na zewnatrz — dokladnie tak,
+  // jak robi to `tableNode`. Liczenie od srodka krzesla dawalo o kilkanascie jednostek
+  // za duzo miejsca i najdalsze nazwiska wychodzily poza kadr.
+  const dir = (p.a * Math.PI) / 180;
+  const out = SEAT_R + (anchor === "middle" ? size * 1.25 : 11);
+  const lxLocal = p.x + Math.cos(dir) * out, lyLocal = p.y + Math.sin(dir) * out;
+  const x = t.x + lxLocal * Math.cos(rad) - lyLocal * Math.sin(rad);
+  const doLewej = x - o.viewX, doPrawej = o.viewX + o.viewW - x;
+  // Zapas jednej wysokosci pisma: szerokosc napisu szacujemy ze sredniej szerokosci znaku,
+  // a przy nazwiskach z samych szerokich liter szacunek potrafi sie mylic o kilka procent.
+  // Podpis wysrodkowany (krzeslo u szczytu stolu) rozchodzi sie w OBIE strony, wiec liczy
+  // sie blizsza krawedz razy dwa — inaczej wystawal poza ekran przy stole tuz przy brzegu.
+  if (anchor === "middle") return Math.max(0, 2 * (Math.min(doLewej, doPrawej) - size));
+  return Math.max(0, (anchor === "start" ? doPrawej : doLewej) - size);
+}
+
+function odstepPionowy(t, i, anchor) {
+  if (anchor === "middle") return Infinity;
+  const pts = seatPositions(t);
+  const p = pts[i];
+  if (!p) return Infinity;
+  const n = pts.length;
+  let d = Infinity;
+  for (const j of [(i - 1 + n) % n, (i + 1) % n]) {
+    const q = pts[j];
+    if (!q || j === i) continue;
+    if (Math.sign(q.x) !== Math.sign(p.x)) continue;     // sasiad zza rogu stolu
+    d = Math.min(d, Math.hypot(q.x - p.x, q.y - p.y));
+  }
+  return d;
+}
+
+function labelRoom(t, geo, anchor, size, viewW, room, pion, doKrawedzi, jedenStol) {
+  // Podpis z boku ucieka na zewnątrz stołu i ma tam sporo miejsca w poziomie — ale
+  // wysokosc wiersza zajmuje przestrzen MIEDZY sasiednimi krzeslami tej samej strony.
+  // Stol obrocony do pionu ma wszystkie krzesla boczne i ciasno upakowane w pionie,
+  // wiec „26 znakow swobody" wpuszczalo nazwiska, ktore natychmiast na siebie wchodzily
+  // i rozciagaly sie na pol sali. Limit poziomy przycinamy proporcjonalnie do tego,
+  // ile pionu naprawde zostalo na jeden wiersz.
+  if (anchor !== "middle") {
+    // Odstep do sasiedniego stolu ma sens tylko wtedy, gdy sasiad TEZ pisze nazwiska.
+    // W widoku goscia po wybraniu osoby podpisy ma wylacznie jej stol, wiec pilnowanie
+    // dystansu do stolu bez podpisow zaciskalo kadr tak, ze nazwiska nie mieszcza sie
+    // przy ZADNYM przyblizeniu i zostawaly same numery.
+    const doSasiada = !room || jedenStol ? Infinity : anchor === "start" ? room.prawo : room.lewo;
+    if (pion !== undefined && pion < size * 1.05) return 0;   // nie ma nawet na jeden wiersz
+    // `doKrawedzi` to realna odleglosc od krzesla do brzegu widocznego kadru w strone,
+    // w ktora biegnie napis. Wczesniej stal tu ryczalt „30% szerokosci widoku", ktory przy
+    // stole blisko krawedzi wypuszczal nazwisko poza ekran, a przy stole na srodku
+    // niepotrzebnie je scinal.
+    return Math.max(0, Math.min(size * 26, doKrawedzi ?? Infinity, doSasiada));
+  }
+  const pitch = t.shape === "round"
     ? (2 * Math.PI * (geo.r + SEAT_GAP + SEAT_R + 20)) / Math.max(1, t.seats)
     : geo.len / Math.max(1, geo.top, geo.bot);
+  return Math.min(pitch, doKrawedzi ?? Infinity);
 }
 
 /**
@@ -2153,6 +2502,23 @@ function labelRoom(t, geo, anchor, size, viewW) {
  * któryś zmieści się dla wszystkich zajętych krzeseł przy tym stole — a gdy nie mieści
  * się nawet inicjał, cały stół dostaje numery.
  */
+/**
+ * Najostrzejszy (najwyzszy) poziom zapisu w kazdej grupie stolow o tej samej liczbie
+ * miejsc. Grupujemy po liczbie miejsc i ksztalcie, bo to one decyduja o ciasnocie —
+ * a jednoczesnie pojedynczy nietypowy stol nie blokuje podpisow na calym planie.
+ */
+function poziomyWgWielkosci(s, o) {
+  if (o.showNames !== "auto") return null;
+  const out = new Map();
+  for (const t of s.tables) {
+    if (o.namesOnlyTable && t.id !== o.namesOnlyTable) continue;
+    const klucz = `${t.shape}:${t.seats}`;
+    const lvl = tableNameLevel(t, tableGeom(t), o, s);
+    out.set(klucz, Math.max(out.get(klucz) ?? 0, lvl));
+  }
+  return out;
+}
+
 function tableNameLevel(t, geo, o, plan) {
   // Gości szukamy w planie przekazanym do rysowania, nie w globalnym `state`:
   // widok gościa rysuje `gvState`, więc `guestById` zwracałby tam same puste wyniki
@@ -2167,11 +2533,22 @@ function tableNameLevel(t, geo, o, plan) {
     if (!p) continue;
     const world = ((p.a + t.rotation) * Math.PI) / 180;
     const anchor = Math.cos(world) > 0.4 ? "start" : Math.cos(world) < -0.4 ? "end" : "middle";
-    const room = labelRoom(t, geo, anchor, size, o.viewW);
+    const room = labelRoom(t, geo, anchor, size, o.viewW, o.sideRoom && o.sideRoom.get(t.id),
+                           odstepPionowy(t, i, anchor), doKrawedzi(t, p, anchor, size, o),
+                           !!o.namesOnlyTable);
+    const pion = odstepPionowy(t, i, anchor);
+    if (window.__d4) window.__d4.push({ i, anchor, room: Math.round(room), pion: isFinite(pion)?Math.round(pion):'inf', size: Math.round(size), n: fullName(g) });
     const forms = nameForms(g);
     let fit = forms.length;                       // domyślnie: nic się nie mieści
-    for (let k = 0; k < forms.length; k++)
-      if (formWidth(forms[k]) * size * 0.52 <= room) { fit = k; break; }
+    for (let k = 0; k < forms.length; k++) {
+      // Wariant dwuwierszowy potrzebuje DWA RAZY tyle wysokosci co jednowierszowy. Bez tego
+      // przy stole na 14 osob nazwiska lamane na dwie linie wchodzily na siebie w pionie,
+      // a jedyna alternatywa byly numery. Teraz taki stol schodzi do samego imienia,
+      // ktore w jednym wierszu jeszcze sie miesci.
+      if (formWidth(forms[k]) * size * 0.52 > room) continue;
+      if (isFinite(pion) && pion < size * 1.15 * forms[k].length) continue;
+      fit = k; break;
+    }
     if (fit > level) level = fit;
     if (level >= forms.length) break;             // niżej już tylko numery
   }
@@ -2204,7 +2581,7 @@ function renderCanvas() {
   applyView(canvas, view);
   renderScene(canvas, state, {
     selection, badSeats: conflictSeats, colorBy: state.meta.colorBy, foundSeats,
-    showNames: "auto", showNumbers: true, viewW: view.w,
+    showNames: "auto", showNumbers: true, viewW: view.w, viewX: view.x,
     pxPerUnit: viewScale(canvas, view).s,
   });
   updateZoomLabel();
@@ -2234,13 +2611,26 @@ function visibleGuestIds() {
   return $$("#guestList .guest").map(n => n.dataset.guest);
 }
 
+/** Identyfikatory wierszy widocznych w liscie po biezacym filtrze i wyszukiwaniu. */
+let widoczneWierszeId = new Set();
+
 function renderBulkBar() {
   picked = new Set([...picked].filter(id => guestById(id)));
   const active = picked.size > 0;
   $("#bulkActive").hidden = !active;
   $("#bulkIdle").hidden = active;
   if (!active) return;
+  // Zaznaczenie przezywalo zmiane filtra, wiec „Usun 4 osoby" kasowalo cztery osoby,
+  // ktorych na ekranie w ogole nie bylo, a cztery widoczne zostawialo. Mowimy wprost,
+  // ile z zaznaczonych jest w tej chwili schowanych.
+  const ukryte = [...picked].filter(id => !widoczneWierszeId.has(id)).length;
   $("#bulkN").textContent = picked.size;
+  const info = $("#bulkHidden");
+  if (info) {
+    info.hidden = !ukryte;
+    info.textContent = ukryte
+      ? `w tym ${ukryte} spoza bieżącego filtra` : "";
+  }
   const sel = $("#bulkGroup");
   const keep = sel.value;
   sel.replaceChildren(new Option("— bez grupy —", ""), ...state.groups.map(g => new Option(g.name, g.id)));
@@ -2262,16 +2652,18 @@ function renderGuests() {
     matched = new Set(use.map(r => r.g.id));
   }
 
-  const rows = state.guests
-    .map(g => ({ g, at: seatOf(g.id) }))
-    .filter(({ g, at }) => {
-      if (filterStatus === "seated" && !at) return false;
-      if (filterStatus === "unseated" && at) return false;
-      if (filterStatus === "conflict" && !guestInConflict(g.id)) return false;
-      if (filterGroups.size && !filterGroups.has(g.groupId || "__none")) return false;
-      return !matched || matched.has(g.id);
-    })
-    .sort((a, b) => byName(a.g, b.g));
+  const widoczni = state.guests.filter(g => {
+    const at = seatOf(g.id);
+    if (filterStatus === "seated" && !at) return false;
+    if (filterStatus === "unseated" && at) return false;
+    if (filterStatus === "conflict" && !guestInConflict(g.id)) return false;
+    if (filterGroups.size && !filterGroups.has(g.groupId || "__none")) return false;
+    return !matched || matched.has(g.id);
+  });
+  // Kotwiczymy w obrebie tego, co widac: gdy filtr wycial gospodarza, jego „os. tow."
+  // wraca do alfabetu zamiast wisiec pod nieobecnym wierszem.
+  const rows = orderedGuests(widoczni).map(r => ({ ...r, at: seatOf(r.g.id) }));
+  widoczneWierszeId = new Set(widoczni.map(g => g.id));
 
   // podświetlenie miejsc: wyniki wyszukiwania albo zaznaczony gość
   const hi = matched
@@ -2285,10 +2677,11 @@ function renderGuests() {
   $("#searchHint").hidden = !fuzzy;
 
   const frag = document.createDocumentFragment();
-  for (const { g, at } of rows) {
+  for (const wiersz of rows) {
+    const { g, at } = wiersz;
     const t = at ? tableById(at.tableId) : null;
     const row = document.createElement("div");
-    row.className = "guest" + (at ? " seated" : "") + (g.rsvp === "no" ? " no-rsvp" : "")
+    row.className = "guest" + (wiersz.indent ? " sub" : "") + (at ? " seated" : "") + (g.rsvp === "no" ? " no-rsvp" : "")
       + (selection && selection.kind === "guest" && selection.id === g.id ? " picked" : "");
     row.dataset.guest = g.id;
     if (picked.has(g.id)) row.classList.add("picked-row");
@@ -2296,7 +2689,7 @@ function renderGuests() {
       `<input type="checkbox" class="pick" ${picked.has(g.id) ? "checked" : ""} title="Zaznacz">` +
       `<span class="dot" style="background:${seatColor(g, state.meta.colorBy)}"></span>` +
       `<span class="nm"></span><span class="tags"></span>`;
-    row.querySelector(".nm").textContent = fullName(g);
+    row.querySelector(".nm").innerHTML = nameHtml(wiersz);
     const marks = [];
     if (g.child) marks.push("dz.");
     if (g.diet) marks.push("dieta");
@@ -2455,12 +2848,26 @@ function renderInspector() {
   ({ table: inspTable, zone: inspZone, seat: inspSeat, guest: inspGuest }[selection.kind])(box);
 }
 
+/**
+ * Pole tekstowe robilo `snapshot()` juz przy wejsciu w nie kursorem. Klikniecie w nazwe
+ * stolu bez napisania ani litery kasowalo wiec stos „Ponow" i wkladalo do historii wpis
+ * identyczny z biezacym stanem — nastepne „Cofnij" wygladalo, jakby aplikacja zamarla.
+ * Migawke bierzemy dopiero przy PIERWSZEJ zmianie w danym przebiegu edycji, a przy wyjsciu
+ * z pola oddajemy ja, jesli tresc wrocila do punktu wyjscia.
+ */
 const bindText = (sel, obj, key, after) => {
   const n = $(sel);
   if (!n) return;                     // pole bywa nieobecne, gdy usunięto powiązaną kategorię
   n.value = obj[key] ?? "";
-  n.oninput = () => { obj[key] = n.value; (after || renderCanvas)(); save(); };
-  n.onfocus = () => snapshot();
+  let wejsciowa = null;               // wartosc w chwili wziecia migawki
+  n.oninput = () => {
+    if (wejsciowa === null) { wejsciowa = obj[key] ?? ""; snapshot(); }
+    obj[key] = n.value; (after || renderCanvas)(); save();
+  };
+  n.onblur = () => {
+    if (wejsciowa !== null && (obj[key] ?? "") === wejsciowa) discardSnapshot();
+    wejsciowa = null;
+  };
 };
 
 /* ---------- stół ---------- */
@@ -2491,6 +2898,12 @@ function inspTable(box) {
       <input type="range" id="i-rot" min="0" max="355" step="5" value="${t.rotation}"></div>
     <div class="field"><label>Posadź całą grupę</label>
       <div class="row"><select id="i-group"></select><button class="btn" id="i-fill">Posadź</button></div></div>
+    <div class="field">
+      <label class="check"><input type="checkbox" id="i-rozpiska" ${t.bezRozpiski ? "" : "checked"}>
+        <span>Pokazuj ten stół w rozpisce dla gości</span></label>
+      <p class="note">Odznacz dla stołu obsługi, zespołu czy fotografa — także wtedy, gdy stoi
+         w innym pomieszczeniu. Taki stół w ogóle nie trafi do widoku dla gości ani do kodu QR,
+         a jego nazwiska nie opuszczą tej przeglądarki. W Twoich eksportach zostaje.</p></div>
     <div class="field row wrap">
       <button class="btn sm" id="i-lock">${t.locked.every(Boolean) ? "Odblokuj miejsca" : "Zablokuj miejsca"}</button>
       <button class="btn sm" id="i-clear">Zwolnij miejsca</button>
@@ -2499,6 +2912,7 @@ function inspTable(box) {
     <div class="field"><button class="btn danger" id="i-del">Usuń stół</button></div>`;
 
   bindText("#i-label", t, "label", () => { renderCanvas(); renderGuests(); });
+  $("#i-rozpiska").onchange = e => { snapshot(); t.bezRozpiski = !e.target.checked; render(); };
   if (t.shape === "round") {
     $("#i-seats").onchange = e => { snapshot(); setSeatCount(t, parseInt(e.target.value, 10)); render(); };
   } else {
@@ -2841,11 +3255,94 @@ function clientToWorld(svg, v, cx, cy, rect) {
     y: (cy - r.top - (r.height - v.h * s) / 2) / s + v.y,
   };
 }
-const applyView = (svg, v) => svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
+/** Jedyne miejsce, w ktorym `viewBox` jest ustawiany — wiec jedyne, w ktorym trzeba
+ *  pilnowac, ze liczby sa liczbami. Plan bez stolow i stref albo kanwa o zerowych
+ *  wymiarach potrafia dac NaN/Infinity, a taki `viewBox` gasi caly rysunek. */
+const applyView = (svg, v) => {
+  if (![v.x, v.y, v.w, v.h].every(Number.isFinite) || v.w <= 0 || v.h <= 0) return;
+  svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
+};
+
+/* ————— plynne dojscie do nowego kadru —————
+ * Skok kadru gubi orientacje: po klikniecie w gościa plan po prostu „byl juz gdzie indziej"
+ * i trzeba bylo od nowa zgadnac, na co sie patrzy. Przejscie pokazuje DROGE.
+ * Gesty (szczypanie, przeciaganie) celowo NIE sa animowane — tam palec jest zegarem,
+ * a kazda animacja zamienia sie w gumowe opoznienie. */
+const animacjeWidoku = new WeakMap();
+
+function stopViewAnim(svg) {
+  const a = animacjeWidoku.get(svg);
+  if (a) { cancelAnimationFrame(a); animacjeWidoku.delete(svg); }
+}
+
+/** Animuje `v` do `cel`. `onFrame` dostaje kazda klatke, `onDone` — koniec. */
+function animateView(svg, v, cel, { ms = 320, onFrame, onDone } = {}) {
+  stopViewAnim(svg);
+  // Cel policzony z degeneracyjnego planu bywa nieskonczony — wtedy nie ma czego animowac.
+  if (![cel.x, cel.y, cel.w, cel.h].every(Number.isFinite) || cel.w <= 0 || cel.h <= 0) {
+    onFrame && onFrame(); onDone && onDone();
+    return;
+  }
+  const skok = Math.abs(cel.w - v.w) / Math.max(v.w, cel.w, 1)
+             + Math.abs(cel.x - v.x) / Math.max(v.w, 1)
+             + Math.abs(cel.y - v.y) / Math.max(v.h, 1);
+  const zredukowany = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (zredukowany || skok < 0.004) {                 // ruch niewidoczny goly okiem
+    Object.assign(v, cel); applyView(svg, v);
+    onFrame && onFrame(); onDone && onDone();
+    return;
+  }
+  const od = { x: v.x, y: v.y, w: v.w, h: v.h };
+  const t0 = performance.now();
+  // Skala zmienia sie GEOMETRYCZNIE (log), nie liniowo. Interpolacja liniowa szerokosci
+  // daje ruch, ktory na poczatku szarpie, a na koncu pelznie.
+  const k = Math.log(cel.w / od.w);
+  const ease = u => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+  let klatka = 0;
+  const krok = now => {
+    const u = Math.min(1, (now - t0) / ms), e = ease(u);
+    const skala = Math.exp(k * e);
+    v.w = od.w * skala; v.h = od.h * skala;
+    v.x = od.x + (cel.x - od.x) * e;
+    v.y = od.y + (cel.y - od.y) * e;
+    applyView(svg, v);
+    onFrame && onFrame();
+    // Podpisy zaleza od przyblizenia, wiec w trakcie dojazdu tez musza sie przeliczac —
+    // inaczej nazwiska „wskakuja" dopiero na koncu. Co trzecia klatka wystarcza dla oka
+    // i zostawia zapas mocy na telefonie.
+    if (onDone && u < 1 && ++klatka % 3 === 0) onDone();
+    if (u < 1) animacjeWidoku.set(svg, requestAnimationFrame(krok));
+    else {
+      animacjeWidoku.delete(svg);
+      Object.assign(v, cel); applyView(svg, v);
+      // Przerysowanie DOPIERO w nastepnej klatce. Karta z miejscem zmienia wysokosc kanwy,
+      // a `pxPerUnit` liczy sie z jej rozmiaru — mierzone w tej samej klatce wychodzilo
+      // sprzed przeliczenia ukladu i podpisy zostawaly na poziomie „same numery".
+      onDone && requestAnimationFrame(() => onDone());
+    }
+  };
+  animacjeWidoku.set(svg, requestAnimationFrame(krok));
+}
+
+/** Kadr po przybliżeniu o `factor` wokół środka — bez ruszania `v`. */
+function zoomTarget(svg, v, factor) {
+  const gora = Math.max(20000, v.w);
+  const nw = clamp(v.w * factor, 250, gora), k = nw / v.w;
+  const cx = v.x + v.w / 2, cy = v.y + v.h / 2;
+  return { w: nw, h: v.h * k, x: cx - nw / 2, y: cy - (v.h * k) / 2 };
+}
 
 function zoomAt(svg, v, cx, cy, factor) {
+  stopViewAnim(svg);             // kolko myszy i szczypanie przerywaja plynne dojscie
   const p = clientToWorld(svg, v, cx, cy);
-  const nw = clamp(v.w * factor, 250, 20000);
+  // Kanwa o zerowych wymiarach (panel jeszcze schowany, karta w trakcie animacji) daje
+  // NaN, ktore wchodzilo prosto do `viewBox` i gasilo caly widok. Lepiej nie zrobic nic.
+  if (!isFinite(p.x) || !isFinite(p.y)) return;
+  // Sztywny sufit 20 000 dawal absurd przy planie szerszym niz 200 m (stol da sie
+  // przeciagnac daleko poza sale): widok otwieral sie na 26 000, wiec „−" ZWEZALO go do
+  // 20 000, czyli przyblizalo. Sufit musi ustepowac temu, co juz jest na ekranie.
+  const gora = Math.max(20000, v.w);
+  const nw = clamp(v.w * factor, 250, gora);
   const k = nw / v.w;
   v.x = p.x - (p.x - v.x) * k;
   v.y = p.y - (p.y - v.y) * k;
@@ -2933,6 +3430,10 @@ const cancelDrag = () => {
   if (!drag) return;
   if (drag.hovered) drag.hovered.classList.remove("hover");
   clearDragMarks(drag);
+  // Przerwane przeciaganie niczego nie zmienilo, wiec migawka wzieta przy `pointerdown`
+  // musi wrocic. Szczypanie dwoma palcami przerywa ruch stolu za kazdym razem, wiec bez
+  // tego zwykle przybliżanie na telefonie kasowalo stos „Ponow".
+  if (!drag.moved) discardSnapshot();
   drag = null;
   ghost.style.display = "none";
   canvas.classList.remove("panning");
@@ -3176,9 +3677,12 @@ window.addEventListener("pointerup", e => {
 function dropOnSeat(d, seatKey) {
   const [tid, idxStr] = seatKey.split(":");
   const target = tableById(tid), ti = +idxStr;
-  if (!target) return;
-  if (d.from && d.from.tableId === tid && d.from.index === ti) return;
-  if (target.locked[ti]) { toast("To miejsce jest zablokowane"); return; }
+  // Migawke wzial `pointerdown` jeszcze zanim bylo wiadomo, gdzie gosc wyladuje. Kazde
+  // wyjscie „nic sie nie zmienilo" musi ja oddac — inaczej w historii siedzi wpis
+  // identyczny z biezacym stanem i „Cofnij" wyglada, jakby aplikacja zamarla.
+  if (!target) return discardSnapshot();
+  if (d.from && d.from.tableId === tid && d.from.index === ti) return discardSnapshot();
+  if (target.locked[ti]) { toast("To miejsce jest zablokowane"); return discardSnapshot(); }
 
   const occupant = target.assign[ti];
   target.assign[ti] = d.guestId;
@@ -3232,20 +3736,39 @@ canvas.addEventListener("wheel", e => {
 
 window.addEventListener("keydown", e => {
   const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+
+  // Escape MUSI dzialac takze w polu tekstowym — inaczej okna z autofokusem („Nowy projekt…")
+  // nie dalo sie zamknac klawiatura w ogole, bo kursor siedzial w polu od pierwszej klatki.
+  if (e.key === "Escape") {
+    if (guestViewVisible() && !$("#gvPreviewBar").hidden) return exitPreview();
+    if (typing) document.activeElement.blur();
+    closeModal(); selection = null; render();
+    return;
+  }
+
+  // Ctrl+Z w polu tekstowym nalezy do TEGO pola. Wczesniej ta galaz stala ponad
+  // sprawdzeniem `typing`, wiec cofniecie literowki w nazwie wydarzenia kasowalo stol
+  // z planu i zatrzaskiwalo okno ustawien.
+  if (typing) return;
+
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault(); e.shiftKey ? redo() : undo(); return;
   }
-  if (typing) return;
   if ((e.key === "Delete" || e.key === "Backspace") && selection) {
+    // Migawke bierzemy dopiero, gdy wiadomo, ze jest co usunac. Delete przy zaznaczonym
+    // GOSCIU nie pasowal do zadnej galezi, wiec kasowal stos „Ponow" i wkladal do historii
+    // wpis identyczny z biezacym stanem — kolejne „Cofnij" nie robilo nic widocznego.
+    const t = selection.kind === "seat" ? tableById(selection.id) : null;
+    const jestCoUsuwac =
+      (selection.kind === "table" && !!tableById(selection.id)) ||
+      (selection.kind === "zone" && state.zones.some(z => z.id === selection.id)) ||
+      (selection.kind === "seat" && !!t && !!t.assign[selection.seatIndex]);
+    if (!jestCoUsuwac) return;
     e.preventDefault(); snapshot();
-    if (selection.kind === "table") { state.tables = state.tables.filter(t => t.id !== selection.id); selection = null; }
+    if (selection.kind === "table") { state.tables = state.tables.filter(x => x.id !== selection.id); selection = null; }
     else if (selection.kind === "zone") { state.zones = state.zones.filter(z => z.id !== selection.id); selection = null; }
-    else if (selection.kind === "seat") tableById(selection.id).assign[selection.seatIndex] = null;
+    else t.assign[selection.seatIndex] = null;
     render();
-  }
-  if (e.key === "Escape") {
-    if (guestViewVisible() && !$("#gvPreviewBar").hidden) return exitPreview();
-    closeModal(); selection = null; render();
   }
 });
 
@@ -3384,6 +3907,11 @@ function openSettings() {
     <h3>Ustawienia</h3>
     <div class="field"><label>Nazwa wydarzenia</label><input type="text" id="st-name"></div>
     <div class="field"><label>Data</label><input type="text" id="st-date" placeholder="np. 12 września 2026"></div>
+    <div class="field"><label>Monogram na ekranie powitalnym</label>
+      <input type="text" id="st-mono" maxlength="12" placeholder="np. N&amp;M">
+      <p class="note">Pokazuje się gościom w chwili otwierania planu, <b>zanim wpiszą kod</b> —
+         więc jest zapisany jawnie i zobaczy go każdy, kto otworzy link. Zostaw puste,
+         jeśli wolisz, żeby przed odblokowaniem nie było widać nic o Was.</p></div>
     <div class="field"><label>Wymiary sali (cm)</label><div class="row">
       <input type="number" id="st-w" step="50" min="300"><input type="number" id="st-h" step="50" min="300"></div></div>
     <h3 style="margin-top:20px">Grupy gości</h3>
@@ -3407,17 +3935,30 @@ function openSettings() {
 
     $("#st-name").value = state.meta.name || "";
     $("#st-date").value = state.meta.date || "";
+    $("#st-mono").value = state.meta.monogram || "";
     $("#st-w").value = state.meta.venue.w;
     $("#st-h").value = state.meta.venue.h;
 
+    // Bez migawki zmiana nazwy albo wymiarow sali byla nieodwracalna, a jedno „Cofnij"
+    // przeskakiwalo ponad nia i cofalo rzecz zrobiona wczesniej — czyli nie te, ktora
+    // czlowiek chcial wycofac.
     const commit = () => {
-      state.meta.name = $("#st-name").value;
-      state.meta.date = $("#st-date").value;
-      state.meta.venue.w = clamp(+$("#st-w").value || 2000, 300, 20000);
-      state.meta.venue.h = clamp(+$("#st-h").value || 1400, 300, 20000);
+      const przed = JSON.stringify(state.meta);
+      const meta = { name: $("#st-name").value, date: $("#st-date").value,
+                     mono: $("#st-mono").value.trim().slice(0, 12),
+                     w: clamp(+$("#st-w").value || 2000, 300, 20000),
+                     h: clamp(+$("#st-h").value || 1400, 300, 20000) };
+      if (meta.name === state.meta.name && meta.date === state.meta.date
+          && meta.mono === (state.meta.monogram || "")
+          && meta.w === state.meta.venue.w && meta.h === state.meta.venue.h) return;
+      snapshot();
+      state.meta.name = meta.name; state.meta.date = meta.date;
+      state.meta.monogram = meta.mono;
+      state.meta.venue.w = meta.w; state.meta.venue.h = meta.h;
+      if (JSON.stringify(state.meta) === przed) discardSnapshot();
       render();
     };
-    ["#st-name", "#st-date", "#st-w", "#st-h"].forEach(s => $(s).onchange = commit);
+    ["#st-name", "#st-date", "#st-mono", "#st-w", "#st-h"].forEach(s => $(s).onchange = commit);
 
     const drawGroups = () => {
       const box = $("#st-groups");
@@ -3435,6 +3976,9 @@ function openSettings() {
           snapshot();
           state.groups = state.groups.filter(x => x.id !== g.id);
           for (const p of state.guests) if (p.groupId === g.id) p.groupId = null;
+          // Filtr na skasowanej grupie zostawal wlaczony, ale nie mial juz swojego chipa:
+          // lista gosci robila sie pusta i nic na ekranie nie tlumaczylo dlaczego.
+          filterGroups.delete(g.id);
           drawGroups(); renderGroupSelect(); render();
         };
         box.append(row);
@@ -3535,6 +4079,30 @@ function parseGuestRows(text) {
   const d = detectDelimiter(dl => lines.map(l => splitCsvLine(l, dl)));
   let rows = lines.map(l => (d ? splitCsvLine(l, d) : [l.replace(/^"(.*)"$/, "$1").trim()]));
   const head = rows[0].map(norm);
+  const kol = n => head.indexOf(n);
+
+  // Nasz wlasny eksport CSV ma kolumny „Stół;Miejsce;Imię;Nazwisko;Grupa;…". Czytnik
+  // bral z niego kolumne 0 jako nazwe, wiec import wlasnego pliku tworzyl goscia
+  // nazwanego „Stół" i gosci nazwanych numerami stolow, gubiac przy tym wszystkie dane.
+  // Gdy w naglowku sa nazwane kolumny, idziemy po nazwach, a nie po pozycji.
+  const iImie = kol("imie"), iNazwisko = kol("nazwisko"), iGrupa = kol("grupa");
+  if (iImie !== -1 && iNazwisko !== -1) {
+    return rows.slice(1)
+      .map(r => ({ name: `${(r[iImie] || "").trim()} ${(r[iNazwisko] || "").trim()}`.trim(),
+                   group: (iGrupa === -1 ? "" : (r[iGrupa] || "")).trim() }))
+      .filter(x => x.name);
+  }
+
+  const nazwaKolumny = ["imie i nazwisko", "imie", "nazwa", "gosc", "osoba", "name", "guest", "full name"]
+    .map(kol).find(i => i !== -1);
+  if (nazwaKolumny !== undefined && nazwaKolumny !== -1) {
+    const g = iGrupa !== -1 ? iGrupa : kol("group");
+    return rows.slice(1)
+      .map(r => ({ name: (r[nazwaKolumny] || "").replace(/\s+/g, " ").trim(),
+                   group: (g === -1 ? "" : (r[g] || "")).trim() }))
+      .filter(x => x.name);
+  }
+
   const looksLikeHeader =
     /^(imie|imie i nazwisko|nazwa|gosc|goscie|osoba|name|guest|full name)$/.test(head[0] || "") ||
     /^(grupa|group|kategoria|strona)$/.test(head[1] || "");
@@ -3743,7 +4311,8 @@ function exportTxt() {
   for (const t of sortedTables()) {
     const zajete = t.assign.filter(Boolean).length;
     const nazwa = (t.label || "").trim() || "STÓŁ BEZ NAZWY";
-    L.push(`${nazwa.toUpperCase()} (${nSeats(t.seats)}, ${zajete} ${plural(zajete, "zajęte", "zajęte", "zajętych")})`);
+    L.push(`${nazwa.toUpperCase()} (${nSeats(t.seats)}, ${zajete} ${plural(zajete, "zajęte", "zajęte", "zajętych")})` +
+           (t.bezRozpiski ? "   [poza rozpiską dla gości]" : ""));
     t.assign.forEach((id, i) => {
       const g = guestById(id);
       const nr = String(i + 1).padStart(2, " ");
@@ -3760,8 +4329,12 @@ function exportTxt() {
   const bez = state.guests.filter(g => !seatOf(g.id));
   if (bez.length) {
     L.push(`BEZ PRZYPISANEGO MIEJSCA (${nGuests(bez.length)})`);
-    for (const g of bez.sort(byName))
-      L.push(`  · ${fullName(g)}${g.rsvp !== "yes" ? "  (" + RSVP_LABEL[g.rsvp] + ")" : ""}`);
+    // W1: nazwisko z przodu — jedyna sekcja eksportu ulozona alfabetycznie, wiec jedyna,
+    // w ktorej rowna kolumna nazwisk cokolwiek daje. Sekcje „wg stolow" rzadzi numer miejsca.
+    for (const r of orderedGuests(bez))
+      L.push(`  ${r.indent ? "  ↳ Osoba towarzysząca (" + nameLastFirst(r.host) + ")"
+                           : "· " + nameLastFirst(r.g)}` +
+             `${r.g.rsvp !== "yes" ? "  (" + RSVP_LABEL[r.g.rsvp] + ")" : ""}`);
     L.push("");
   }
 
@@ -3776,19 +4349,20 @@ function exportTxt() {
 }
 
 function exportCsv() {
-  const head = ["Stół", "Miejsce", "Imię", "Nazwisko", "Grupa", "RSVP", "Dieta", "Dziecko", "Notatka"];
+  const head = ["Stół", "Miejsce", "Imię", "Nazwisko", "Grupa", "RSVP", "Dieta", "Dziecko", "Notatka",
+                "W rozpisce dla gości"];
   const rows = [];
   for (const t of sortedTables())
     t.assign.forEach((id, i) => {
       const g = guestById(id);
       if (!g) return;
       rows.push([t.label, i + 1, g.firstName, g.lastName, (groupById(g.groupId) || {}).name || "",
-                 RSVP_LABEL[g.rsvp], g.diet, g.child ? "tak" : "", g.note]);
+                 RSVP_LABEL[g.rsvp], g.diet, g.child ? "tak" : "", g.note, t.bezRozpiski ? "nie" : "tak"]);
     });
   for (const g of state.guests)
     if (!seatOf(g.id))
       rows.push(["(bez miejsca)", "", g.firstName, g.lastName, (groupById(g.groupId) || {}).name || "",
-                 RSVP_LABEL[g.rsvp], g.diet, g.child ? "tak" : "", g.note]);
+                 RSVP_LABEL[g.rsvp], g.diet, g.child ? "tak" : "", g.note, "tak"]);
 
   const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = "﻿" + [head, ...rows].map(r => r.map(cell).join(";")).join("\r\n");
@@ -3796,11 +4370,32 @@ function exportCsv() {
 }
 
 /** Buduje samodzielny <svg> całej sali (poza ekranem) — dla PNG i wydruku. */
-function buildPlanSvg(pad = 160) {
+/**
+ * Kadr eksportu: prostokat sali POWIEKSZONY o wszystko, co z niego wystaje. Stoly mozna
+ * przeciagnac poza sale, a uchwyt zmiany wymiarow potrafi skurczyc sale pod istniejacymi
+ * stolami — przy sztywnym kadrze takie stoly znikaly z PNG i z wydruku bez slowa,
+ * choc w planerze byly widoczne.
+ */
+function exportBox(pad) {
   const V = state.meta.venue;
+  let x1 = 0, y1 = 0, x2 = V.w, y2 = V.h;
+  for (const t of state.tables) {
+    const e = tableExtent(t);
+    x1 = Math.min(x1, t.x - e.w / 2); y1 = Math.min(y1, t.y - e.h / 2);
+    x2 = Math.max(x2, t.x + e.w / 2); y2 = Math.max(y2, t.y + e.h / 2);
+  }
+  for (const z of state.zones) {
+    x1 = Math.min(x1, z.x); y1 = Math.min(y1, z.y);
+    x2 = Math.max(x2, z.x + z.w); y2 = Math.max(y2, z.y + z.h);
+  }
+  return { x: x1 - pad, y: y1 - pad, w: (x2 - x1) + pad * 2, h: (y2 - y1) + pad * 2 };
+}
+
+function buildPlanSvg(pad = 160) {
+  const B = exportBox(pad);
   const svg = el("svg", {
-    xmlns: SVG_NS, viewBox: `${-pad} ${-pad} ${V.w + pad * 2} ${V.h + pad * 2}`,
-    width: V.w + pad * 2, height: V.h + pad * 2,
+    xmlns: SVG_NS, viewBox: `${B.x} ${B.y} ${B.w} ${B.h}`,
+    width: B.w, height: B.h,
   });
   // Bez `colorBy` eksport zawsze kolorował grupami — plan dla cateringu wychodził
   // w innych barwach niż to, co układający widział na ekranie.
@@ -3809,8 +4404,27 @@ function buildPlanSvg(pad = 160) {
   const style = el("style");
   style.textContent = $("#canvasCss").textContent;
   svg.insertBefore(style, svg.firstChild);   // po renderScene, bo ono czysci <svg>
+  liftLabels(svg);
   spreadLabels(svg);
   return svg;
+}
+
+/**
+ * Podpisy na wierzch. Kazdy stol to osobna grupa dokladana po kolei, wiec blat i krzesla
+ * stolu narysowanego pozniej zamalowywaly nazwisko sasiada — `spreadLabels` rozsuwa tylko
+ * tekst od tekstu i o geometrii nie wie nic. Przenosimy podpisy do warstwy na koncu <svg>,
+ * kopiujac transformacje grupy stolu, zeby wspolrzedne zostaly co do jednostki te same.
+ */
+function liftLabels(svg) {
+  const warstwa = el("g", { "data-labels": "1", "pointer-events": "none" });
+  for (const g of [...svg.querySelectorAll("g.table-g")]) {
+    const podpisy = [...g.querySelectorAll("text.seat-name")];
+    if (!podpisy.length) continue;
+    const sub = el("g", { transform: g.getAttribute("transform") || "" });
+    sub.append(...podpisy);
+    warstwa.append(sub);
+  }
+  if (warstwa.childNodes.length) svg.append(warstwa);
 }
 
 /**
@@ -3828,7 +4442,8 @@ function exportNameFont() {
     for (const id of t.assign) {
       const g = guestById(id);
       if (!g) continue;
-      const forms = nameForms(g);
+      if (window.__d3) window.__d3.push({ i, anchor, room: Math.round(room), kraw: doKrawedzi(t, p, anchor, size, o), vx:o.viewX, vw:o.viewW, size:Math.round(size) });
+    const forms = nameForms(g);
       const szer = formWidth(forms[1] || forms[0] || [""]);  // wariant złamany po spacji
       if (szer > 0) font = Math.min(font, pitch / (szer * 0.52));
     }
@@ -3881,7 +4496,7 @@ function spreadLabels(svg) {
       const proby = [[full]];
       if (slowa.length > 1) proby.push([slowa.slice(0, -1).join(" "), slowa[slowa.length - 1]]);
       proby.push([first]);
-      let level = 0, fits = false;
+      let level = 0, fits = false, zostalNumer = false;
       for (const v of proby) {
         ustaw(n, v);
         if (!collides(grow(n.getBoundingClientRect()))) { fits = true; break; }
@@ -3922,6 +4537,7 @@ function spreadLabels(svg) {
           n.style.fontSize = bazowy + "px";
           place(x0, y0);
           ustaw(n, [num || first]);
+          zostalNumer = !!num;      // TYLKO tu podpis naprawde schodzi do cyfry
         }
         level = 2;
       }
@@ -3929,7 +4545,10 @@ function spreadLabels(svg) {
       // inaczej kolejny podpis nachodziłby na to, co właśnie tu zostawiliśmy.
       placed.push(grow(n.getBoundingClientRect()));
       if (level === 1) stats.skrocone++;
-      if (level >= 2) { stats.numery++; if (num) n.classList.add("seat-num"); }
+      // `level === 2` znaczylo tylko „poszlo w dalsze proby", a nie „zostal numer": podpis
+      // z pelnym nazwiskiem dostawal wtedy blada szarosc krzesla numerowanego i gubil sie
+      // na wydruku. Kolor i licznik ida teraz za tym, co NAPRAWDE jest w podpisie.
+      if (zostalNumer) { stats.numery++; n.classList.add("seat-num"); }
     }
   } finally {
     holder.remove();
@@ -3938,9 +4557,19 @@ function spreadLabels(svg) {
   return stats;
 }
 
+/** Chrome odmawia rasteryzacji plotna powyzej ok. 268 mln pikseli — `toBlob` zwraca wtedy
+ *  `null`, a kolejny krok wywalal sie surowym bledem z URL.createObjectURL. Trzymamy sie
+ *  bezpiecznego zapasu i mowimy wprost, ze zmniejszylismy rozdzielczosc. */
+const MAX_PIKSELI = 200e6;
+
 async function exportPng(scale = 2.5) {
   const svg = buildPlanSvg();
   const w = +svg.getAttribute("width"), h = +svg.getAttribute("height");
+  const zadana = scale;
+  scale = Math.min(scale, Math.sqrt(MAX_PIKSELI / Math.max(1, w * h)));
+  if (scale < zadana * 0.999)
+    toast(`Plan jest bardzo duży — PNG zapisujemy w mniejszej skali (${scale.toFixed(1)}× zamiast ${zadana}×). ` +
+          `Do druku użyj „Drukuj plan".`, 7000);
   const src = new XMLSerializer().serializeToString(svg);
   const url = URL.createObjectURL(new Blob([src], { type: "image/svg+xml;charset=utf-8" }));
   try {
@@ -3953,6 +4582,7 @@ async function exportPng(scale = 2.5) {
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+    if (!blob) throw new Error("plan jest za duży dla przeglądarki — zmniejsz salę albo użyj wydruku");
     download(`${slug(state.meta.name)}-plan.png`, blob);
   } catch (err) {
     toast("Nie udało się wygenerować PNG: " + err.message, 5000);
@@ -3976,7 +4606,9 @@ function printPlan() {
   for (const t of sortedTables()) {
     const rows = t.assign.map((id, i) => ({ i, g: guestById(id) })).filter(r => r.g);
     const sec = document.createElement("div");
-    sec.innerHTML = `<h2>${esc(t.label)} — ${rows.length}/${t.seats} os.</h2>` +
+    sec.innerHTML = `<h2>${esc(t.label)} — ${rows.length}/${t.seats} os.` +
+      (t.bezRozpiski ? ` <span style="font-weight:400;color:#666">(poza rozpiską dla gości)</span>` : "") +
+      `</h2>` +
       (rows.length
         ? `<table class="pl"><tr><th style="width:52px">Miejsce</th><th>Gość</th><th style="width:130px">Grupa</th><th style="width:130px">Dieta</th></tr>` +
           rows.map(r => `<tr><td>${r.i + 1}</td><td>${esc(fullName(r.g))}</td>` +
@@ -3993,6 +4625,16 @@ function printPlan() {
     p2.append(sec);
   }
   root.append(p2);
+
+  // Uczciwe ostrzezenie zamiast nieczytelnej kartki: liczymy, ile milimetra zostanie
+  // z podpisu po wciśnięciu calego planu w jedna strone A4 (poziomo, marginesy 12 mm).
+  const B = exportBox(160);
+  const mmNaJednostke = Math.min(273 / B.w, 165 / B.h);
+  const pt = exportNameFont() * mmNaJednostke * 2.8346;
+  if (pt < 5)
+    toast(`Przy tylu stołach podpisy na wydruku zejdą do ~${pt.toFixed(1)} pt i będą nieczytelne. ` +
+          `Lepiej zapisać plan jako PNG i wydrukować go na większym arkuszu.`, 9000);
+
   window.print();
 }
 
@@ -4036,12 +4678,24 @@ async function openShare() {
   const urlC = `${baseUrl()}#c=${code}`;
   const urlA = `${baseUrl()}?v=g#d=${encoded}`;
   const urlB = `${baseUrl()}?v=g` + (protect ? `#k=${state.meta.shareKey}` : "");
-  const seated = payload.g.length;
+  // `g` niesie takze osoby bez miejsca (doklejone na koncu), wiec sama dlugosc tablicy
+  // meldowala „rozsadzonych: 20" przy osmiu zajetych krzeslach — czyli chowala przed
+  // czlowiekiem dokladnie te osoby, ktore mial jeszcze usadzic.
+  const seated = payload.g.length - (payload.u || 0);
+  const bezMiejsca = payload.u || 0;
+  // Latwo odznaczyc stol i o tym zapomniec, a to jedyny moment przed wyslaniem planu.
+  const pominieteStoly = state.tables.filter(t => t.bezRozpiski);
+  const pominieciGoscie = pominieteStoly.reduce((n, t) => n + t.assign.filter(Boolean).length, 0);
 
   openModal(`
     <h3>Udostępnij gościom</h3>
-    <p class="note">Rozsadzonych osób w planie: <b>${seated}</b>. Goście zobaczą wyłącznie imiona,
-       nazwiska i miejsca — bez telefonów, diet i notatek.</p>
+    <p class="note">Rozsadzonych osób w planie: <b>${seated}</b>${
+      bezMiejsca ? `, bez przypisanego miejsca: <b>${bezMiejsca}</b>` : ""}.
+       Goście zobaczą wyłącznie imiona, nazwiska i miejsca — bez telefonów, diet i notatek.</p>
+    ${pominieteStoly.length ? `<p class="note"><b>Poza rozpiską:</b> ${
+      pominieteStoly.map(t => esc(t.label || "stół bez nazwy")).join(", ")}${
+      pominieciGoscie ? ` — ${nGuests(pominieciGoscie)}` : ""}. Tych stołów i nazwisk
+      nie ma w wysyłanym planie.</p>` : ""}
 
     ${cryptoReady() ? `
     <div class="steps">
@@ -4138,7 +4792,7 @@ async function openShare() {
         $("#sh-warnc").textContent =
           `Kod QR ma ${qc.dataset.modules}×${qc.dataset.modules} modułów — wystarczy mu ` +
           `${printCm(qc)} × ${printCm(qc)} cm na wydruku.` +
-          (state.meta.baseUrl ? "" : " Wpisz adres publiczny w Ustawieniach, żeby prowadził pod właściwą stronę.");
+          (state.meta.baseUrl ? "" : " Wpisz adres publiczny w polu wyżej, żeby prowadził pod właściwą stronę.");
         $("#sh-qc").onclick = () => qrToPng(qc, "qr-plan-sali.png");
       }
       $("#sh-cc").onclick = () => copy(urlC);
@@ -4282,11 +4936,108 @@ const nSeats  = n => `${n} ${plural(n, "miejsce", "miejsca", "miejsc")}`;
  * tekstu układa je po znakach, więc „10" trafiało między „1" a „2".
  * `numeric: true` w Intl robi dokładnie to, czego tu trzeba, i przy okazji zna polski alfabet.
  */
+/**
+ * Stoly, ktore trafiaja do planu dla gosci. Odznaczony stol moze stac w zupelnie innym
+ * pomieszczeniu (obsluga, zespol, fotograf) — dla gosci taki stol nigdy nie istnial,
+ * wiec nie rysujemy go, nie wypisujemy i nie wysylamy jego nazwisk.
+ */
+const wRozpisce = t => !t.bezRozpiski;
+const stolyDlaGosci = plan => ((plan || state).tables || []).filter(wRozpisce);
+
+/** Goscie siedzacy przy stolach wylaczonych z rozpiski — nie wolno ich nigdzie pokazac. */
+function ukryciGoscieIds(plan) {
+  const out = new Set();
+  for (const t of (plan || state).tables || [])
+    if (t.bezRozpiski) for (const id of t.assign) if (id) out.add(id);
+  return out;
+}
+
 const collator = new Intl.Collator("pl", { numeric: true, sensitivity: "base" });
 const byLabel = (a, b) => collator.compare(a.label || "", b.label || "");
 /** Stoły w kolejności do pokazania człowiekowi (kolejność w modelu zostaje nietknięta). */
 const sortedTables = plan => [...((plan || state).tables || [])].sort(byLabel);
-const byName = (a, b) => collator.compare(fullName(a), fullName(b));
+/* ————— Porzadek alfabetyczny: NAZWISKO, potem imie —————
+ * Rodzina ma wspolne nazwisko, wiec sortowanie po nim sklei malzonkow i dzieci
+ * bez zadnej wiedzy o relacjach miedzy nimi. */
+
+/** Goscia wpisanego jednym slowem („Madonna") makeGuest wklada w `firstName`, zostawiajac
+ *  puste `lastName`. Bez tego fallbacku wszyscy tacy wyladowaliby hurtem na poczatku listy. */
+const sortLast  = g => ((g.lastName || "").trim() || (g.firstName || "").trim());
+const sortFirst = g => ((g.lastName || "").trim() ? (g.firstName || "").trim() : "");
+const byName = (a, b) =>
+  collator.compare(sortLast(a), sortLast(b)) || collator.compare(sortFirst(a), sortFirst(b));
+
+/** „Osoba towarzyszaca — Anna Kowalska" i warianty: „os. tow.", bez separatora, bez ogonkow.
+ *  Rozpoznajemy po NAZWIE, nie po polu `plusOneOf`, bo partner z wlasnym nazwiskiem ma zostac
+ *  w alfabecie przy swojej rodzinie — wciecie dostaje tylko wpis bez wlasnej tozsamosci. */
+const OS_TOW = /^os(?:oba)?\.?\s+tow(?:arzyszac[aey]|\.)?\s*(?:[-–—:,]\s*)?(.*)$/;
+const plusOneInfo = g => {
+  const m = OS_TOW.exec(norm(fullName(g)).trim());
+  return m ? { host: m[1].trim() } : null;
+};
+
+/**
+ * Goscie w porzadku do pokazania czlowiekowi: alfabetycznie po nazwisku, a wpisy bez wlasnej
+ * tozsamosci dosuniete pod swojego gospodarza jako wiersz podrzedny.
+ * Zwraca [{ g, indent, host }] — `host` jest ustawiony wylacznie dla wierszy podrzednych.
+ */
+function orderedGuests(guests) {
+  const byId = new Map(guests.map(g => [g.id, g]));
+  const byNorm = new Map();
+  for (const g of guests) {
+    const k = norm(fullName(g)).trim();
+    if (k && !byNorm.has(k)) byNorm.set(k, g);
+  }
+
+  // Kotwica, pierwsza trafiona wygrywa: 1) pole `plusOneOf` (struktura bije tekst),
+  // 2) nazwa wyparsowana ze wzorca, 3) nic — wtedy wpis zostaje zwyklym gosciem.
+  const host = new Map();
+  for (const g of guests) {
+    const info = plusOneInfo(g);
+    if (!info) continue;
+    const h = (g.plusOneOf && byId.get(g.plusOneOf)) || (info.host && byNorm.get(info.host)) || null;
+    if (h && h.id !== g.id) host.set(g.id, h);
+  }
+  // Gospodarz, ktory sam jest wierszem podrzednym, nie moze nikogo przygarnac — inaczej
+  // zrobilby sie lancuch albo cykl. Taki wpis wraca do alfabetu.
+  for (const [id, h] of [...host]) if (host.has(h.id)) host.delete(id);
+
+  const kids = new Map(), top = [];
+  for (const g of guests) {
+    const h = host.get(g.id);
+    if (!h) { top.push(g); continue; }
+    if (!kids.has(h.id)) kids.set(h.id, []);
+    kids.get(h.id).push(g);
+  }
+
+  top.sort(byName);
+  const out = [];
+  for (const g of top) {
+    out.push({ g, indent: false, host: null });
+    for (const k of (kids.get(g.id) || []).sort(byName)) out.push({ g: k, indent: true, host: g });
+  }
+  return out;
+}
+
+/** W2 — widok w aplikacji: „Anna **Kowalska**". Nazwa czyta sie naturalnie, a pogrubienie
+ *  pokazuje, ktora czesc rzadzi kolejnoscia. Wiersz podrzedny dostaje wlasna, krotka etykiete;
+ *  nazwisko gospodarza zostaje w nawiasie, bo przy przewijaniu dlugiej listy gospodarz
+ *  potrafi zostac poza ekranem i samo „Osoba towarzyszaca" nie mowiloby juz nic. */
+function nameHtml(row) {
+  const g = row.g || row;
+  if (row.host) return `<span class="tow">↳ Osoba towarzysząca</span> (${esc(fullName(row.host))})`;
+  const f = (g.firstName || "").trim(), l = (g.lastName || "").trim();
+  if (!l || plusOneInfo(g)) return esc(fullName(g));
+  return `${esc(f)} <b>${esc(l)}</b>`.trim();
+}
+
+/** W1 — eksport tekstowy: „Kowalska Anna", zeby dalo sie skanowac wzrokiem po kolumnie.
+ *  Wpis, ktory nie ma struktury imie/nazwisko — jednoczlonowy albo nierozpoznana „os. tow."
+ *  bez gospodarza — zostaje w oryginale; odwrocenie zrobiloby z niego belkot. */
+const nameLastFirst = g => {
+  const f = (g.firstName || "").trim(), l = (g.lastName || "").trim();
+  return l && !plusOneInfo(g) ? `${l} ${f}`.trim() : fullName(g);
+};
 const fmtSize = bytes => bytes < 1048576
   ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1048576).toFixed(2)} MB`;
 
@@ -4828,9 +5579,12 @@ async function pobierzPlany(cfg, wpisy) {
     try { plan = await decryptWithCode(file, code); }
     catch (e) { zlyKod++; continue; }
     if (!plan || !Array.isArray(plan.guests)) { zlyKod++; continue; }
-    const istnieje = projects.list.find(p => p.name === (w.nazwa || w.plik));
+    // Dopasowanie po NAZWIE wyswietlanej kasowalo cudza prace: dwa niezalezne projekty
+    // nazwane tak samo byly brane za ten sam plan. Wiaze nas plik w repozytorium.
+    const istnieje = projects.list.find(p => p.github && p.github.plik === w.plik
+                                          && p.github.repo === cfg.repo && p.github.branch === cfg.branch);
     if (istnieje) {
-      flushSave();
+      if (!flushSave()) continue;
       projects.active = istnieje.id;
       istnieje.updatedAt = Date.now();
       saveIndex();
@@ -5001,6 +5755,10 @@ const actions = {
   }),
   "preview": () => {
     if (!state.tables.length) return toast("Najpierw dodaj stoły");
+    // Wszystkie stoly odznaczone daja goscia pusta sale — lepiej powiedziec to wprost
+    // niz pokazac plan bez niczego i kazac zgadywac, co poszlo nie tak.
+    if (!stolyDlaGosci().length)
+      return toast("Każdy stół jest odznaczony jako \u201epoza rozpiską\u201d — goście zobaczyliby pustą salę.", 7000);
     showGuestView(publicPayload(), true);
   },
   "settings": openSettings,
@@ -5008,9 +5766,18 @@ const actions = {
   "undo": undo,
   "redo": redo,
   "autoseat": openAutoSeat,
-  "zoom-in":  () => { zoomCenter(canvas, view, 1 / 1.3); renderCanvas(); },
-  "zoom-out": () => { zoomCenter(canvas, view, 1.3); renderCanvas(); },
-  "zoom-fit": () => { fitView(canvas, view, state.meta.venue); renderCanvas(); },
+  "zoom-in":  () => animateView(canvas, view, zoomTarget(canvas, view, 1 / 1.3), { onFrame: updateZoomLabel, onDone: renderCanvas }),
+  "zoom-out": () => animateView(canvas, view, zoomTarget(canvas, view, 1.3), { onFrame: updateZoomLabel, onDone: renderCanvas }),
+  // „Dopasuj" mieszczacy sam prostokat sali potrafil zostawic stol poza kadrem: stoly
+  // wolno przeciagac poza sale, a w panelu nie ma spisu stolow, wiec taki stol dalo sie
+  // odnalezc juz tylko slepym przesuwaniem mapy. Kadrujemy TRESC, nie sale.
+  "zoom-fit": () => {
+    const B = exportBox(140);
+    const cel = { ...view };
+    fitView(canvas, cel, { w: B.w, h: B.h }, 0);
+    cel.x += B.x; cel.y += B.y;
+    animateView(canvas, view, cel, { onFrame: updateZoomLabel, onDone: renderCanvas });
+  },
   "toggle-filters": () => setFilterPop($("#filterPop").hidden),
   "toggle-left":  () => togglePanel("#left"),
   "toggle-right": () => togglePanel("#right"),
@@ -5220,7 +5987,15 @@ $("#bulkUnseat").addEventListener("click", () => {
 });
 $("#bulkDelete").addEventListener("click", () => {
   const n = picked.size;
-  if (n > 3 && !confirm(`Usunąć ${n} osób z listy gości? Tej operacji nie da się cofnąć inaczej niż Ctrl+Z.`)) return;
+  // Kasowanie jest nieodwracalne inaczej niz Ctrl+Z, wiec o osobach spoza filtra
+  // trzeba powiedziec WPROST, a nie tylko podac laczna liczbe.
+  const ukryci = [...picked].filter(id => !widoczneWierszeId.has(id)).map(id => fullName(guestById(id)));
+  const ostrzezenie = ukryci.length
+    ? `\n\nUwaga: ${ukryci.length} z nich nie widać przy bieżącym filtrze:\n` +
+      ukryci.slice(0, 8).join(", ") + (ukryci.length > 8 ? `, …i ${ukryci.length - 8} więcej` : "")
+    : "";
+  if ((n > 3 || ukryci.length) &&
+      !confirm(`Usunąć ${n} osób z listy gości? Tej operacji nie da się cofnąć inaczej niż Ctrl+Z.${ostrzezenie}`)) return;
   snapshot();
   deleteGuests([...picked]);
   picked.clear();
@@ -5288,7 +6063,10 @@ const gvCanvas = $("#gvCanvas");
 let gvState = null, gvView = { x: -120, y: -120, w: 2240, h: 1640 }, gvHighlight = null;
 
 function payloadToState(p) {
-  const guests = (p.g || []).map((x, i) => ({ id: "vg" + i, firstName: x[0] || "", lastName: x[1] || "", groupId: null }));
+  const guests = (p.g || []).map((x, i) => ({ id: "vg" + i, firstName: x[0] || "", lastName: x[1] || "",
+                                              groupId: null, plusOneOf: null }));
+  for (const [ktos, gospodarz] of p.p || [])
+    if (guests[ktos] && guests[gospodarz]) guests[ktos].plusOneOf = guests[gospodarz].id;
   const tables = (p.t || []).map((t, i) => {
     const tab = {
       id: "vt" + i, label: t[0], shape: t[1] === 0 ? "round" : "rect",
@@ -5319,6 +6097,58 @@ function payloadToState(p) {
 }
 
 let gvMine = null;
+/**
+ * Dopasowanie widoku gościa do TREŚCI planu, nie do prostokąta sali.
+ *
+ * Sala bywa znacznie większa niż to, co w niej stoi, a na telefonie każdy zmarnowany piksel
+ * boli: przy sali 18×13 m na ekranie 390 px plan zajmował ledwie trzecią część wysokości mapy.
+ * Liczymy więc obrys samych stołów i stref, a potem — gdy proporcje ekranu i planu mocno się
+ * rozjeżdżają — dokładamy trochę przybliżenia ponad „zmieść wszystko”. Sufit 1,4× jest
+ * kompromisem: plan robi się wyraźnie większy, a wciąż widać jego zdecydowaną większość.
+ */
+function fitGuestView(plynnie = false) {
+  const s = gvState;
+  if (!s) return;
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  const obejmij = (a, b, c, d) => {
+    x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d);
+  };
+  for (const t of s.tables) {
+    const e = tableExtent(t);
+    obejmij(t.x - e.w / 2, t.y - e.h / 2, t.x + e.w / 2, t.y + e.h / 2);
+  }
+  for (const z of s.zones) obejmij(z.x, z.y, z.x + z.w, z.y + z.h);
+  if (!isFinite(x1)) return fitView(gvCanvas, gvView, s.meta.venue);
+
+  const waski = matchMedia("(max-width:900px)").matches;
+  const pad = waski ? 40 : 80;
+  const bw = x2 - x1 + pad * 2, bh = y2 - y1 + pad * 2;
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  const r = gvCanvas.getBoundingClientRect();
+  const ar = (r.width || 1) / (r.height || 1);
+
+  let w = bw, h = bh;
+  if (w / h < ar) w = h * ar; else h = w / ar;      // „zmieść wszystko”
+  // Ile pustego marginesu zrobiło się z niedopasowania proporcji ekranu do planu.
+  // MAKSIMUM, nie minimum: po dopasowaniu proporcji jeden wymiar jest z definicji równy 1,
+  // więc `min` zawsze dawało 1 i ograniczenie nigdy nie działało.
+  const nadmiar = Math.max(w / bw, h / bh);
+  // Na telefonie świadomie przybliżamy mocniej, niż wynika z „zmieść wszystko": pionowy ekran
+  // przy szerokiej sali marnował dwie trzecie wysokości, a plan był nieczytelny. Część planu
+  // wychodzi wtedy poza ekran — na telefonie to uczciwa zamiana, bo przesuwanie palcem jest
+  // naturalne, a przycisk „Cały plan" zawsze wraca do pełnego widoku.
+  // Świadomie NIE przybliżamy ponad „zmieść wszystko". Szeroka sala na pionowym ekranie
+  // telefonu nie wypełni go bez ucięcia brzegów, a widok otwierający ma pokazywać całość —
+  // gość najpierw chce zobaczyć układ sali, dopiero potem szuka siebie. Zysk bierze się
+  // stąd, że kadrujemy obrys STOŁÓW I STREF, a nie prostokąt sali, który bywa dużo większy.
+  const k = 1;
+  w /= k; h /= k;
+
+  const cel = { x: cx - w / 2, y: cy - h / 2, w, h };
+  if (plynnie) animateView(gvCanvas, gvView, cel, { onDone: gvRender });
+  else { Object.assign(gvView, cel); applyView(gvCanvas, gvView); }
+}
+
 function gvRender() {
   applyView(gvCanvas, gvView);
   renderScene(gvCanvas, gvState, {
@@ -5326,7 +6156,7 @@ function gvRender() {
     showNumbers: true, showNames: "auto",
     namesOnlyTable: gvHighlight || "\u0000",   // brak wyboru → sama numeracja
     pxPerUnit: viewScale(gvCanvas, gvView).s,
-    viewW: gvView.w,
+    viewW: gvView.w, viewX: gvView.x,
   });
 }
 
@@ -5349,6 +6179,42 @@ function gvZoomSpan(t, maxExt) {
   return clamp(Math.min(maxExt * base, wanted), maxExt * 1.2, maxExt * 2.4);
 }
 
+/**
+ * Kadr wybrany dla stolu ma sens tylko wtedy, gdy przy krzeslach WIDAC NAZWISKA — po to
+ * gosc go otwiera. Sam wzor na rozstaw krzesel tego nie gwarantuje: dlugie polskie
+ * nazwiska przy stole na 10 osob nie mieszcza sie na telefonie i caly stol schodzil
+ * wtedy do numerow, ktore niczego gosciowi nie mowia. Dociskamy wiec kadr, dopoki
+ * nazwiska sie nie pojawia — ale nie ciasniej niz sam stol z krzeslami.
+ */
+function gvSpanZNazwiskami(t, span, maxExt, r, ar) {
+  const geo = tableGeom(t);
+  const podloga = maxExt * 1.05;      // ciasniej stol zaczyna byc obcinany
+  const probuj = s => {
+    const w = ar >= 1 ? s * ar : s, h = w / ar;
+    const px = Math.min((r.width || 1) / w, (r.height || 1) / h);
+    return tableNameLevel(t, geo, {
+      showNames: "auto", namesOnlyTable: t.id, pxPerUnit: px,
+      viewW: w, viewX: t.x - w / 2, sideRoom: sideRoom(gvState.tables),
+    }, gvState);
+  };
+  // Dwa ograniczenia ciagna w PRZECIWNE strony, wiec szukac trzeba w obie:
+  //   • podpis z boku konkuruje z krawedzia ekranu — pomaga ODDALENIE (stol malenie,
+  //     robi sie miejsca po bokach), bo napis ma staly rozmiar w pikselach;
+  //   • podpis nad krzeslem konkuruje z rozstawem krzesel, ktory jest staly w swiecie —
+  //     pomaga ZBLIZENIE, bo napis maleje w skali planu.
+  // Stol okragly zwykle blokuje sie na pierwszym, prostokatny na drugim. Skanowanie tylko
+  // w jedna strone zostawialo prostokatne stoly z samymi numerami przy kazdym przyblizeniu.
+  const brakNazwisk = 4;                    // tyle wynosi poziom „same numery"
+  const kandydaci = [];
+  for (let s = podloga; s <= maxExt * 3.4; s *= 1.07) kandydaci.push(s);
+  const pasujace = kandydaci.filter(s => probuj(s) < brakNazwisk);
+  if (!pasujace.length) return span;
+  // Kadr naturalny (`span`) niesie juz sensowna zaleznosc od liczby miejsc — im wiecej
+  // krzesel, tym ciasniej. Odchodzimy od niego tylko o tyle, o ile trzeba, zeby nazwiska
+  // sie zmiescily: z pasujacych bierzemy ten NAJBLIZSZY naturalnemu.
+  return pasujace.reduce((a, b) => (Math.abs(b - span) < Math.abs(a - span) ? b : a));
+}
+
 function gvSeatOf(guestId) {
   for (const t of gvState.tables) {
     const i = t.assign.indexOf(guestId);
@@ -5357,12 +6223,21 @@ function gvSeatOf(guestId) {
   return null;
 }
 
+/** Widocznosc „x" i strzalki powrotu ma JEDNO zrodlo prawdy: czy cokolwiek jest wybrane
+ *  albo wpisane. Wczesniej te stany rozjezdzaly sie miedzy sciezkami wyboru. */
+function gvOdswiezKontrolki() {
+  const pole = $("#gvSearch"), x = $("#gvClear"), powrot = $("#gvBackWrap");
+  if (!pole || !x || !powrot) return;
+  x.hidden = !(pole.value.trim() || gvHighlight);
+  powrot.hidden = !gvHighlight;
+}
+
 function gvSelect(guest) {
   const at = gvSeatOf(guest.id);
   $("#gvResults").classList.remove("show");
   $("#gvSearch").value = fullName(guest);
   if (!at) {
-    gvHighlight = null; gvMine = null; gvRender();
+    gvHighlight = null; gvMine = null; gvRender(); gvOdswiezKontrolki();
     $("#gvCard").classList.add("show");
     $("#gvName").textContent = fullName(guest);
     $("#gvSeat").textContent = "Nie znaleźliśmy przypisanego miejsca.";
@@ -5373,26 +6248,22 @@ function gvSelect(guest) {
   gvHighlight = t.id;
   gvMine = { tableId: t.id, index: at.index };
   gvSetTab("mine");
-  $("#gvBack").hidden = false;
+  gvOdswiezKontrolki();
 
   // Przybliżenie dobieramy tak, żeby na krzesła starczyło miejsca na imiona.
   // Przy dużym stole rozstaw krzeseł jest ciaśniejszy, więc stały mnożnik zostawiał
   // widok, w którym widać już tylko numery.
-  const ext = tableExtent(t);
-  const span = gvZoomSpan(t, Math.max(ext.w, ext.h));
-  const r = gvCanvas.getBoundingClientRect();
-  const ar = (r.width || 1) / (r.height || 1);
-  gvView.w = ar >= 1 ? span * ar : span;
-  gvView.h = gvView.w / ar;
-  gvView.x = t.x - gvView.w / 2;
-  gvView.y = t.y - gvView.h / 2;
-  gvRender();
-
   const nameAt = i => {
     const g = gvState.guests.find(x => x.id === t.assign[((i % n) + n) % n]);
     return g ? fullName(g) : null;
   };
-  const left = nameAt(at.index - 1), right = nameAt(at.index + 1);
+  // Przy stole 1- i 2-osobowym modulo sprowadza „poprzednie" i „nastepne" krzeslo do tego
+  // samego miejsca — przy stole pary mlodej wychodzilo „Obok Ciebie: Piotr, Piotr",
+  // a przy jednoosobowym gosc byl wypisany jako wlasny sasiad.
+  const lewy = n > 2 ? ((at.index - 1) % n + n) % n : (n === 2 ? 1 - at.index : -1);
+  const prawy = n > 2 ? (at.index + 1) % n : -1;
+  const left = lewy >= 0 ? nameAt(lewy) : null;
+  const right = prawy >= 0 ? nameAt(prawy) : null;
 
   $("#gvCard").classList.add("show");
   $("#gvName").textContent = fullName(guest);
@@ -5401,16 +6272,35 @@ function gvSelect(guest) {
   $("#gvMates").innerHTML = left || right
     ? `<b>Obok Ciebie:</b> ${esc([left, right].filter(Boolean).join(", "))}`
     : `<span style="color:var(--muted)">Sąsiednie miejsca są jeszcze wolne.</span>`;
+
+  // Kadr liczymy DOPIERO teraz. Karta z miejscem zabiera dol kanwy, a jej wysokosc zalezy
+  // od tresci, ktora wlasnie wpisalismy — mierzenie wczesniej dawalo proporcje pustej karty
+  // i kadr rozjezdzal sie o kilkanascie procent. To wlasnie ten kadr decyduje, czy przy
+  // krzeslach zmieszcza sie nazwiska, czy zostana same numery.
+  const ext = tableExtent(t);
+  const r = gvCanvas.getBoundingClientRect();
+  const ar = (r.width || 1) / (r.height || 1);
+  const maxExt = Math.max(ext.w, ext.h);
+  const span = gvSpanZNazwiskami(t, gvZoomSpan(t, maxExt), maxExt, r, ar);
+  const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
+  // Plynne dojscie zamiast skoku: gosc widzi, DOKAD plan sie przesunal, wiec nie musi
+  // od nowa szukac punktu odniesienia w sali.
+  gvRender();
+  animateView(gvCanvas, gvView, { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 },
+              { onDone: gvRender });
 }
 
 let gvListMode = "az";           // "az" = alfabetycznie, "table" = numerowana wg stołów
 
-function gvRow(g, { number = null, where = null }) {
+function gvRow(g, { number = null, where = null, row = null }) {
   const b = document.createElement("button");
   b.innerHTML = `${number !== null ? '<span class="num"></span>' : ""}` +
                 `<span class="nm"></span><span class="where"></span>`;
   if (number !== null) b.querySelector(".num").textContent = number + ".";
-  b.querySelector(".nm").textContent = fullName(g);
+  // Numerowana lista „wg stolow" zostaje przy zwyklej nazwie: rzadzi tam numer miejsca,
+  // wiec pogrubianie nazwiska nic by nie porzadkowalo, a dodaloby szumu.
+  if (row) { b.querySelector(".nm").innerHTML = nameHtml(row); if (row.indent) b.classList.add("sub"); }
+  else b.querySelector(".nm").textContent = fullName(g);
   b.querySelector(".where").textContent = where || "";
   b.onclick = () => { gvToggleList(false); gvSelect(g); };
   return b;
@@ -5421,11 +6311,10 @@ function gvBuildList() {
   body.replaceChildren();
 
   if (gvListMode === "az") {
-    gvState.guests
-      .map(g => ({ g, at: gvSeatOf(g.id) }))
-      .sort((a, b) => byName(a.g, b.g))
-      .forEach(({ g, at }) =>
-        body.append(gvRow(g, { where: at ? `${at.table.label}, miejsce ${at.index + 1}` : "" })));
+    for (const row of orderedGuests(gvState.guests)) {
+      const at = gvSeatOf(row.g.id);
+      body.append(gvRow(row.g, { row, where: at ? `${at.table.label}, miejsce ${at.index + 1}` : "" }));
+    }
     return;
   }
 
@@ -5442,7 +6331,17 @@ function gvBuildList() {
 
 /** Zakładki: „mine" pokazuje mapę, pozostałe listę w danym porządku. */
 let gvTab = "mine";
+/**
+ * Obie listy rysuja sie w tym samym `#gvListBody`, wiec `scrollTop` przechodzil miedzy
+ * zakladkami: przewinieta lista alfabetyczna otwierala „Wg stolow" gdzies w srodku, a przy
+ * krotszej liscie przegladarka dociskala pozycje z powrotem — wygladalo to jak wspolny,
+ * szarpiacy sie scroll. Kazda zakladka pamieta swoja pozycje.
+ */
+const gvScroll = { az: 0, table: 0 };
+
 function gvSetTab(tab) {
+  const body = $("#gvListBody");
+  if (gvTab === "az" || gvTab === "table") gvScroll[gvTab] = body.scrollTop;
   gvTab = tab;
   $$("#gvTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
   const list = $("#gvList");
@@ -5451,6 +6350,8 @@ function gvSetTab(tab) {
   $("#gvListTitle").textContent = tab === "az" ? "Wszyscy goście — alfabetycznie" : "Goście wg stołów";
   if (gvState) gvBuildList();
   list.hidden = false;
+  // Po `hidden = false`, bo do ukrytego elementu przegladarka nie zapisze scrollTop.
+  body.scrollTop = gvScroll[tab] || 0;
 }
 function gvToggleList(show) { gvSetTab(show === false ? "mine" : gvTab === "mine" ? "az" : "mine"); }
 
@@ -5460,55 +6361,18 @@ let gvTopHit = null;
  * Dopasowanie po numerze miejsca: „12", „stół 3", „3/12".
  * Goście częściej pamiętają numer z winietki niż własne nazwisko w cudzej pisowni.
  */
-/**
- * Numer stołu wyciągamy z etykiety i porównujemy liczbowo. Dopasowanie tekstowe
- * (`label.includes("1")`) na weselu z 16 stołami zwracało przy „stół 1" osiem stołów:
- * 1 oraz 10-16 — gość dostawał listę przypadkowych osób.
- */
-const tableNumberOf = label => {
-  const m = String(label).match(/\d+/);
-  return m ? Number(m[0]) : null;
-};
-const tableMatches = (label, num) => {
-  const own = tableNumberOf(label);
-  return own !== null ? own === num : norm(label).includes(String(num));
-};
-
-function gvSeatMatches(raw) {
-  const q = norm(raw).trim();
-  const digits = q.match(/\d+/g);
-  if (!digits) return [];
-  const nums = digits.map(Number);
-  const wantsTable = /stol/.test(q);
-  const out = [];
-  for (const g of gvState.guests) {
-    const at = gvSeatOf(g.id);
-    if (!at) continue;
-    const label = at.table.label, seatNo = at.index + 1;
-    let hit;
-    if (nums.length >= 2) hit = tableMatches(label, nums[0]) && seatNo === nums[1];
-    else if (wantsTable) hit = tableMatches(label, nums[0]);
-    else hit = seatNo === nums[0] || tableMatches(label, nums[0]);
-    if (hit) out.push(g);
-  }
-  return out;
-}
-
 function gvSearchInput() {
   const box = $("#gvResults");
   const raw = $("#gvSearch").value.trim();
-  const minLen = /\d/.test(raw) ? 1 : 2;
+  const minLen = 2;
   if (!gvState || norm(raw).length < minLen) { box.classList.remove("show"); gvTopHit = null; return; }
 
-  const bySeat = gvSeatMatches(raw);
+  // Szukanie po numerze miejsca zostało usunięte: „7" pasuje do siódmego krzesła przy KAŻDYM
+  // stole, więc gość dostawał listę przypadkowych osób i nie wiedział, która jest jego.
+  // Numeru i tak nie zna, zanim nie znajdzie swojego stołu — szuka się nazwiskiem.
   const res = searchGuests(gvState.guests, raw);
   const exact = res.filter(r => r.exact);
-  const byName = exact.length ? exact : res;
-  const seen = new Set();
-  const use = bySeat.map(g => ({ g, exact: true }))
-    .concat(byName)
-    .filter(r => (seen.has(r.g.id) ? false : seen.add(r.g.id)))
-    .slice(0, 10);
+  const use = (exact.length ? exact : res).slice(0, 10);
   gvTopHit = use.length ? use[0].g : null;
 
   box.replaceChildren();
@@ -5518,7 +6382,7 @@ function gvSearchInput() {
     d.textContent = "Nie znaleźliśmy takiej osoby. Spróbuj samego nazwiska.";
     box.append(d);
   } else {
-    if (!exact.length && !bySeat.length) {
+    if (!exact.length) {
       const d = document.createElement("div");
       d.className = "gv-hint";
       d.textContent = "Nie ma dokładnie takiego wpisu — może chodzi o:";
@@ -5556,31 +6420,49 @@ function initGuestView() {
     const g = first && gvState.guests.find(x => x.id === first);
     if (g) return gvSelect(g);
     gvHighlight = t.id;
+    gvOdswiezKontrolki();
     const ext = tableExtent(t), span = gvZoomSpan(t, Math.max(ext.w, ext.h));
     const r = gvCanvas.getBoundingClientRect(), ar = (r.width || 1) / (r.height || 1);
-    gvView.w = ar >= 1 ? span * ar : span;
-    gvView.h = gvView.w / ar;
-    gvView.x = t.x - gvView.w / 2;
-    gvView.y = t.y - gvView.h / 2;
-    $("#gvBack").hidden = false;
+    const cw = ar >= 1 ? span * ar : span, ch = cw / ar;
     gvRender();
+    animateView(gvCanvas, gvView, { w: cw, h: ch, x: t.x - cw / 2, y: t.y - ch / 2 },
+                { onDone: gvRender });
   });
 
   $("#gvTabs").addEventListener("click", e => {
     const b = e.target.closest("button[data-tab]");
     if (b && gvState) gvSetTab(b.dataset.tab);
   });
-  $("#gvBack").addEventListener("click", () => {
+  // Powrót do widoku całej sali. Jeden mechanizm dla wszystkich dróg: przycisk „Cały plan"
+  // w pasku przybliżenia, wyczyszczenie pola wyszukiwania krzyżykiem i klawisz Escape.
+  // Osobny przycisk „← Cała sala" nad mapą był drugim sposobem na to samo i tylko zabierał miejsce.
+  window.gvShowAll = () => {
     gvHighlight = null; gvMine = null;
     $("#gvCard").classList.remove("show");
-    $("#gvBack").hidden = true;
-    fitView(gvCanvas, gvView, gvState.meta.venue);
+    $("#gvResults").classList.remove("show");
+    gvOdswiezKontrolki();
     gvRender();
-  });
+    fitGuestView(true);
+  };
+
   // Klasa „searching" chowa tytuł i podpowiedź na telefonie — od chwili, gdy gość
   // zaczął szukać, potrzebuje miejsca na mapę, a nie na instrukcję, którą już wykonał.
   const markSearching = () => $("#guestView").classList.add("searching");
-  $("#gvSearch").addEventListener("input", e => { markSearching(); gvSearchInput(e); });
+  $("#gvSearch").addEventListener("input", e => {
+    markSearching();
+    gvOdswiezKontrolki();
+    // Krzyżyk w polu wyszukiwania czyści je do pustego — wtedy wracamy do całej sali,
+    // dokładnie tak jak po kliknięciu „Cały plan".
+    if (!$("#gvSearch").value.trim()) return gvShowAll();
+    gvSearchInput(e);
+  });
+  $("#gvSearch").addEventListener("search", () => { if (!$("#gvSearch").value.trim()) gvShowAll(); });
+  $("#gvClear").addEventListener("click", () => {
+    $("#gvSearch").value = "";
+    gvShowAll();
+    $("#gvSearch").focus();
+  });
+  $("#gvSearch").addEventListener("keydown", e => { if (e.key === "Escape") gvShowAll(); });
   $("#gvSearch").addEventListener("focus", e => { markSearching(); gvSearchInput(e); });
   $("#gvSearch").addEventListener("keydown", e => {
     if (e.key === "Enter" && gvTopHit) { e.preventDefault(); gvSelect(gvTopHit); }
@@ -5589,17 +6471,25 @@ function initGuestView() {
     if (!e.target.closest("#gvSearchWrap")) $("#gvResults").classList.remove("show");
   });
 
-  attachPinch(gvCanvas, gvView, gvRender);
+  // Kontroler gestu MUSI być przypisany: bez tego przesuwanie nie wie, że trwa szczypanie,
+  // reaguje na drugi palec jak na osobne przeciąganie i nadpisuje pozycję ustawioną przez
+  // pinch — mapa skacze w stronę pierwszego palca zamiast przybliżać się w punkcie gestu.
+  const gvPinch = attachPinch(gvCanvas, gvView, gvRender);
   let gvDrag = null;
   gvCanvas.addEventListener("pointerdown", e => {
     if (e.button !== 0) return;
+    if (gvPinch.isPinching()) { gvDrag = null; return; }
     try { gvCanvas.setPointerCapture(e.pointerId); } catch (_) {}
     const p = clientToWorld(gvCanvas, gvView, e.clientX, e.clientY);
-    gvDrag = { x: p.x, y: p.y, view: { ...gvView } };
+    stopViewAnim(gvCanvas);        // palec jest wazniejszy niz trwajaca animacja
+    gvDrag = { id: e.pointerId, x: p.x, y: p.y, view: { ...gvView } };
   });
   gvCanvas.addEventListener("pointermove", e => {
-    if (!gvDrag) return;
-    const p = clientToWorld(gvCanvas, gvView, e.clientX, e.clientY);
+    if (!gvDrag || e.pointerId !== gvDrag.id) return;      // drugi palec należy do gestu, nie do przesuwania
+    if (gvPinch.isPinching()) { gvDrag = null; return; }
+    // Odwzorowanie liczone z widoku SPRZED chwycenia — inaczej powstaje pętla sprzężenia
+    // i mapa drga, tak jak drgała w planerze.
+    const p = clientToWorld(gvCanvas, gvDrag.view, e.clientX, e.clientY, null);
     gvView.x = gvDrag.view.x - (p.x - gvDrag.x);
     gvView.y = gvDrag.view.y - (p.y - gvDrag.y);
     applyView(gvCanvas, gvView);
@@ -5619,11 +6509,12 @@ function initGuestView() {
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-gv]");
     if (!b || !gvState) return;
-    if (b.dataset.gv === "zoom-in")  { zoomCenter(gvCanvas, gvView, 1 / 1.3); gvRender(); }
-    if (b.dataset.gv === "zoom-out") { zoomCenter(gvCanvas, gvView, 1.3); gvRender(); }
+    if (b.dataset.gv === "zoom-in")
+      animateView(gvCanvas, gvView, zoomTarget(gvCanvas, gvView, 1 / 1.3), { onDone: gvRender });
+    if (b.dataset.gv === "zoom-out")
+      animateView(gvCanvas, gvView, zoomTarget(gvCanvas, gvView, 1.3), { onDone: gvRender });
     if (b.dataset.gv === "zoom-fit") {
-      gvHighlight = null; gvMine = null; $("#gvBack").hidden = true;
-      fitView(gvCanvas, gvView, gvState.meta.venue); gvRender();
+      gvShowAll();
     }
   });
 }
@@ -5641,7 +6532,7 @@ function showGuestView(payload, preview = false) {
   $("#gvResults").classList.remove("show");
   $("#gvCard").classList.remove("show");
   gvSetTab("mine");
-  $("#gvBack").hidden = true;
+  gvOdswiezKontrolki();
   $("#gvPreviewBar").hidden = !preview;
   $("#gvLock").hidden = true;
   $("#gvFind").hidden = false;
@@ -5652,7 +6543,7 @@ function showGuestView(payload, preview = false) {
     ? `${gvState.meta.date} — wpisz swoje imię lub nazwisko, aby znaleźć miejsce.`
     : "Wpisz swoje imię lub nazwisko, aby znaleźć swoje miejsce.";
   document.title = gvState.meta.name;
-  requestAnimationFrame(() => { fitView(gvCanvas, gvView, gvState.meta.venue); gvRender(); });
+  requestAnimationFrame(() => { fitGuestView(); gvRender(); });
 }
 
 function exitPreview() {
@@ -5663,6 +6554,7 @@ function exitPreview() {
 }
 
 function showGuestError(msg) {
+  ukryjSplash();
   initGuestView();
   $("#app").style.display = "none";
   $("#guestView").classList.add("show");
@@ -5673,16 +6565,50 @@ function showGuestError(msg) {
 
 /** Tryb gościa z adresu: dane z fragmentu (#d=) albo plan.json, ewentualnie zaszyfrowany. */
 /** Odblokowanie planu wbudowanego w stronę — kodem z adresu albo wpisanym ręcznie. */
+/* ————— ekran ladowania —————
+ * Odszyfrowanie kodem to PBKDF2 z 310 000 iteracji: na telefonie ulamek sekundy do sekundy.
+ * Bez tego ekranu gosc po zeskanowaniu kodu QR patrzyl w pusta strone i nie wiedzial,
+ * czy cokolwiek sie dzieje. */
+let splashDo = 0;
+function pokazSplash(mono) {
+  const box = $("#gvSplash");
+  if (!box) return;
+  $("#gvMono").textContent = (mono || "").trim().slice(0, 12);
+  box.classList.remove("out");
+  box.hidden = false;
+  splashDo = performance.now() + 550;      // minimalny czas, zeby nie mrugnal i nie zniknal
+}
+function ukryjSplash() {
+  const box = $("#gvSplash");
+  if (!box || box.hidden) return;
+  const zwloka = Math.max(0, splashDo - performance.now());
+  setTimeout(() => {
+    box.classList.add("out");
+    setTimeout(() => { box.hidden = true; box.classList.remove("out"); }, 360);
+  }, zwloka);
+}
+
 function askForCode(file, prefill) {
   const lock = $("#gvLock"), input = $("#gvCode"), err = $("#gvCodeErr");
   $("#gvFind").hidden = true;
-  lock.hidden = false;
+  // Ekran z polem na kod pokazujemy DOPIERO, gdy kod jest naprawde potrzebny. Gosc, ktory
+  // zeskanowal kod QR, ma go juz w adresie — pokazywanie mu pola, ktore i tak zaraz samo
+  // sie wypelni, to ekran, na ktorym nie ma nic do zrobienia.
+  lock.hidden = !!prefill;
   $("#gvSub").textContent = "Ten plan jest zabezpieczony. Wpisz kod z zaproszenia.";
 
   const attempt = async () => {
     const code = normalizeCode(input.value);
     if (code.length !== CODE_LEN) {
-      err.textContent = `Kod ma ${CODE_LEN} znaków — wpisz go w całości.`;
+      // Alfabet kodu nie zawiera 0, O, 1, I ani L, a `normalizeCode` po prostu je wycina.
+      // Gosc, ktory pomylil Q z O, widzial w polu 10 znakow i czytal „wpisz go w calosci" —
+      // komunikat o czyms, czego wlasnie nie zrobil zle. Mowimy, gdzie naprawde jest blad.
+      const obce = [...String(input.value).toUpperCase()]
+        .filter(c => /[A-Z0-9]/.test(c) && !CODE_ALPHABET.includes(c));
+      err.textContent = obce.length
+        ? `W kodzie nie ma znaków ${[...new Set(obce)].join(", ")} — łatwo je pomylić, ` +
+          `więc ich nie używamy. Sprawdź: 0 to O, 1 to I lub L.`
+        : `Kod ma ${CODE_LEN} znaków — wpisz go w całości.`;
       return;
     }
     err.textContent = "";
@@ -5693,7 +6619,12 @@ function askForCode(file, prefill) {
       lock.hidden = true;
       $("#gvFind").hidden = false;
       showGuestView(payload, false);
+      ukryjSplash();
     } catch (e) {
+      // Kod z adresu nie zadzialal — dopiero TERAZ pokazujemy pole, bo dopiero teraz
+      // jest w nim coś do zrobienia.
+      ukryjSplash();
+      lock.hidden = false;
       err.textContent = "Ten kod nie pasuje do tego planu. Sprawdź go jeszcze raz.";
     } finally {
       $("#gvCodeGo").disabled = false;
@@ -5705,8 +6636,8 @@ function askForCode(file, prefill) {
   input.onkeydown = e => { if (e.key === "Enter") attempt(); };
   input.oninput = () => { err.textContent = ""; };
 
-  if (prefill) { input.value = formatCode(prefill); attempt(); }
-  else input.focus();
+  if (prefill) { input.value = formatCode(prefill); pokazSplash(file.mono); attempt(); }
+  else { ukryjSplash(); input.focus(); }
 }
 
 async function bootGuestMode() {
@@ -5716,6 +6647,11 @@ async function bootGuestMode() {
 
   const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
   const inline = hash.get("d"), key = hash.get("k"), code = hash.get("c");
+
+  // Monogram bierzemy z JAWNEGO pola pliku — plan jest jeszcze zaszyfrowany, wiec nazwy
+  // wydarzenia w tej chwili nie znamy i znac nie mozemy.
+  const wbudowany = embeddedPlan();
+  pokazSplash((wbudowany && wbudowany.mono) || "");
 
   // 1. Cały plan zakodowany w adresie ma pierwszeństwo. Wariant A celuje w ten sam
   // opublikowany `index.html`, który nosi już własny szyfrogram — sprawdzanie planu
@@ -5727,7 +6663,7 @@ async function bootGuestMode() {
   }
 
   // 2. Plan wbudowany w tę stronę — nic nie trzeba dociągać z sieci.
-  const embedded = payload ? null : embeddedPlan();
+  const embedded = payload ? null : wbudowany;
   if (embedded) {
     if (!cryptoReady())
       return showGuestError("Ta przeglądarka nie potrafi odszyfrować planu. Spróbuj w innej.");
@@ -5759,8 +6695,9 @@ async function bootGuestMode() {
     }
   }
 
-  if (!payload) return showGuestError(problem || "Nie udało się wczytać planu. Poproś o aktualny link lub kod QR.");
+  if (!payload) { ukryjSplash(); return showGuestError(problem || "Nie udało się wczytać planu. Poproś o aktualny link lub kod QR."); }
   showGuestView(payload, false);
+  ukryjSplash();
 }
 
 /* ================================= START ================================= */
@@ -5785,6 +6722,9 @@ if (guestByAttribute || params.get("v") === "g" || location.hash.startsWith("#d=
   $("#gripRight").onclick = () => foldPanel("noright");
   $("#scrim").onclick = closePanels;
   applyGithubHash();
+  // Awarie wczytywania musza dojsc do czlowieka. Cicha podmiana planu na demonstracyjny
+  // wygladala jak „aplikacja skasowala mi wesele" i nie dawala zadnej wskazowki, co robic.
+  if (startowyKomunikat) toast(startowyKomunikat, 12000);
 }
 </script>
 </body>
